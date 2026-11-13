@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { AiInput } from '../ai/settings'
-import { LAST_SITE_MESSAGE, toggleSite } from '../engine/siteSettings'
+import { LAST_SITE_MESSAGE, moveSite, toggleSite } from '../engine/siteSettings'
 import type { SiteSettingsView } from '../shared/messages'
 import type { AiSettingsView, CollectionReport, PostingKey, PostingPatch, ScoringSummary, SearchCriteria, StoredPosting } from '../shared/types'
 import { send, updatePosting } from './api'
@@ -86,7 +86,15 @@ export function App() {
     if (!sites) return
     const next = toggleSite(sites.settings, id, on)
     if (next.kind === 'last-site') throw new Error(LAST_SITE_MESSAGE)
-    const settings = await send({ type: 'saveSiteSettings', enabledSites: next.settings.enabledSites })
+    const settings = await send({ type: 'saveSiteSettings', enabledSites: next.settings.enabledSites, siteOrder: next.settings.siteOrder })
+    setSites({ ...sites, settings })
+  }
+
+  async function moveSiteOrder(id: string, direction: 'up' | 'down') {
+    if (!sites) return
+    const next = moveSite(sites.settings, id, direction)
+    if (next === sites.settings) return
+    const settings = await send({ type: 'saveSiteSettings', enabledSites: next.enabledSites, siteOrder: next.siteOrder })
     setSites({ ...sites, settings })
   }
 
@@ -163,13 +171,13 @@ export function App() {
           </nav>
           <main>
             <div hidden={tab !== 'postings'}>
-              <PostingsView postings={postings} hasCriteria={hasCriteria} onUpdate={(k, p) => void patchPosting(k, p)} onOpenSettings={() => setTab('settings')} />
+              <PostingsView postings={postings} hasCriteria={hasCriteria} siteOrder={sites.settings.siteOrder} onUpdate={(k, p) => void patchPosting(k, p)} onOpenSettings={() => setTab('settings')} />
             </div>
             <div hidden={tab !== 'settings'}>
               <SettingsView criteria={criteria} ai={ai} onSave={saveSettings} onDeleteKey={deleteKey} onCheckKey={checkKey} onDevReset={devReset} />
             </div>
             <div hidden={tab !== 'sites'}>
-              <SitesView state={sites} busy={busy} canCollect={hasCriteria} onToggle={toggleSiteOn} onCollectSite={(id) => void collectSite(id)} />
+              <SitesView state={sites} busy={busy} canCollect={hasCriteria} onToggle={toggleSiteOn} onMove={moveSiteOrder} onCollectSite={(id) => void collectSite(id)} />
             </div>
           </main>
         </>

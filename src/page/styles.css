@@ -154,6 +154,11 @@ input, select, textarea {
 .site-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; }
 .site-head h3 { margin: 0; font-size: 16px; }
 .site-head .state { margin-left: 4px; vertical-align: 2px; }
+.site-controls { display: inline-flex; align-items: center; gap: 10px; }
+.move-buttons { display: inline-flex; gap: 4px; }
+.move-btn { min-width: 28px; height: 26px; padding: 0 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; font-size: 13px; line-height: 1; cursor: pointer; }
+.move-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.move-btn:disabled { opacity: 0.35; cursor: default; }
 .site-url { margin: 0; font-size: 14px; }
 .site-url a { color: var(--accent); }
 .site-row .facts { flex-direction: column; margin: 0; }

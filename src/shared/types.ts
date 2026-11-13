@@ -142,6 +142,7 @@ export interface CollectionSummary {
 /** The sites collection uses. Always holds at least one id of an available adapter. */
 export interface SiteSettings {
   enabledSites: string[]
+  siteOrder: string[]
 }
 
 export type SiteRunResult = { kind: 'ok'; summary: CollectionSummary } | { kind: 'error'; message: string }

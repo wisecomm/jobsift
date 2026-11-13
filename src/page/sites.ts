@@ -14,4 +14,14 @@ export const SITE_LIST: SiteInfo[] = [
   ...PLANNED,
 ]
 
+export function orderedSiteList(siteOrder: readonly string[]): SiteInfo[] {
+  const byId = new Map<string, SiteInfo>(SITE_LIST.filter((s) => s.availability === 'available').map((s) => [s.id, s]))
+  const ordered = siteOrder.map((id) => byId.get(id)).filter((s): s is SiteInfo => s !== undefined)
+  const seen = new Set(ordered.map((s) => s.id))
+  for (const site of SITE_LIST) {
+    if (!seen.has(site.id)) ordered.push(site)
+  }
+  return ordered
+}
+
 export const siteName = (id: string): string => SITE_LIST.find((site) => site.id === id)?.name ?? id

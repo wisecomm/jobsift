@@ -1,5 +1,4 @@
-import type { SiteAdapter } from '../adapter/schema'
-import { adapterIds, adapters, getAdapter } from '../adapter/registry'
+import { adapterIds, adapters } from '../adapter/registry'
 import { REQUEST_GAP_MS } from '../ai/constants'
 import { aiErrorMessage, checkKey, scoreBatch } from '../ai/gemini'
 import { createPacer } from '../ai/pacer'
@@ -10,7 +9,7 @@ import { normalizeCriteria, parseCriteria } from '../engine/criteria'
 import { runAllSites } from '../engine/runAllSites'
 import { scorePending, toScoringSummary, type ScoringDeps } from '../engine/scorePending'
 import { loadSiteRuns, recordSiteRuns } from '../engine/siteRuns'
-import { loadSiteSettings, LAST_SITE_MESSAGE, parseSiteSettings, storeSiteSettings } from '../engine/siteSettings'
+import { loadSiteSettings, LAST_SITE_MESSAGE, parseSiteSettings, selectAdaptersForRun, storeSiteSettings } from '../engine/siteSettings'
 import type { Request, ResponseData, ResponseFor, SettingsResult } from '../shared/messages'
 import type { SearchCriteria } from '../shared/types'
 import { openStore } from '../storage/store'
@@ -56,16 +55,13 @@ async function scoringDeps(criteria: SearchCriteria): Promise<ScoringDeps | unde
   }
 }
 
-function sitesToRun(site: string | undefined, enabledSites: readonly string[]): SiteAdapter[] {
-  if (site === undefined) return adapters.filter(({ id }) => enabledSites.includes(id))
-  const adapter = getAdapter(site)
-  if (!adapter) throw new Error(`알 수 없는 사이트입니다: ${site}`)
-  return [adapter]
-}
-
 async function collectNow(site?: string): Promise<ResponseData['collect']> {
-  const [store, criteria, { enabledSites }] = await Promise.all([storePromise, readCriteria(), loadSiteSettings(chrome.storage.local, adapterIds)])
-  const report = await runAllSites(sitesToRun(site, enabledSites), criteria, store, { fetchHtml, now: new Date(), scoring: await scoringDeps(criteria) })
+  const [store, criteria, siteSettings] = await Promise.all([storePromise, readCriteria(), loadSiteSettings(chrome.storage.local, adapterIds)])
+  const report = await runAllSites(selectAdaptersForRun(adapters, site, siteSettings), criteria, store, {
+    fetchHtml,
+    now: new Date(),
+    scoring: await scoringDeps(criteria),
+  })
   await recordSiteRuns(chrome.storage.local, report.runs)
   return report
 }
@@ -111,7 +107,11 @@ async function handle(request: Request): Promise<ResponseData[Request['type']]> 
     case 'saveSiteSettings': {
       const known = new Set(adapterIds)
       if (!request.enabledSites.some((id) => known.has(id))) throw new Error(LAST_SITE_MESSAGE)
-      const settings = parseSiteSettings({ enabledSites: request.enabledSites }, adapterIds)
+      const current = await loadSiteSettings(chrome.storage.local, adapterIds)
+      const settings = parseSiteSettings(
+        { enabledSites: request.enabledSites, siteOrder: request.siteOrder ?? current.siteOrder },
+        adapterIds,
+      )
       await storeSiteSettings(chrome.storage.local, settings)
       return settings
     }

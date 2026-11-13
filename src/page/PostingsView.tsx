@@ -9,6 +9,7 @@ import { STATUS_TABS } from './statuses'
 interface Props {
   postings: StoredPosting[]
   hasCriteria: boolean
+  siteOrder: readonly string[]
   onUpdate: (key: PostingKey, patch: PostingPatch) => void
   onOpenSettings: () => void
 }
@@ -20,11 +21,18 @@ const CAREER_OPTIONS: { value: CareerOption; label: string }[] = [
   { value: 'any', label: '경력무관' },
 ]
 
-export function PostingsView({ postings, hasCriteria, onUpdate, onOpenSettings }: Props) {
+export function PostingsView({ postings, hasCriteria, siteOrder, onUpdate, onOpenSettings }: Props) {
   const [view, setView] = useState<ListView>(INITIAL_VIEW)
   const change = (patch: Partial<ListView>) => setView((v) => ({ ...v, ...patch, page: 1 }))
   const selection = useMemo(() => selectPostings(postings, view), [postings, view])
-  const sites = useMemo(() => [...new Set(postings.flatMap((p) => postingSources(p).map((s) => s.site)))], [postings])
+  const sites = useMemo(() => {
+    const present = [...new Set(postings.flatMap((p) => postingSources(p).map((s) => s.site)))]
+    return present.sort((a, b) => {
+      const ia = siteOrder.indexOf(a)
+      const ib = siteOrder.indexOf(b)
+      return (ia === -1 ? Number.MAX_SAFE_INTEGER : ia) - (ib === -1 ? Number.MAX_SAFE_INTEGER : ib)
+    })
+  }, [postings, siteOrder])
   const filtered = view.site !== 'all' || view.career !== 'all' || view.query.trim() !== ''
   const now = new Date()
 
