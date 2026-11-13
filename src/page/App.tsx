@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { AiInput } from '../ai/settings'
+import { LAST_SITE_MESSAGE, toggleSite } from '../engine/siteSettings'
+import type { SiteSettingsView } from '../shared/messages'
 import type { AiSettingsView, CollectionReport, PostingKey, PostingPatch, ScoringSummary, SearchCriteria, StoredPosting } from '../shared/types'
 import { send, updatePosting } from './api'
 import { Header } from './Header'
 import { PostingsView } from './PostingsView'
 import { SettingsView } from './SettingsView'
+import { SitesView } from './SitesView'
+import { SITES_TAB_LABEL } from './sites'
 
-type Tab = 'postings' | 'settings'
+type Tab = 'postings' | 'settings' | 'sites'
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
@@ -16,6 +20,7 @@ export function App() {
   const [postings, setPostings] = useState<StoredPosting[]>([])
   const [ai, setAi] = useState<AiSettingsView | null>(null)
   const [pending, setPending] = useState(0)
+  const [sites, setSites] = useState<SiteSettingsView | null>(null)
   const [report, setReport] = useState<CollectionReport | null>(null)
   const [scoring, setScoring] = useState<ScoringSummary | null>(null)
   const [busy, setBusy] = useState(false)
@@ -24,12 +29,14 @@ export function App() {
   useEffect(() => {
     void (async () => {
       try {
-        const [saved, savedAi, list, waiting] = await Promise.all([
+        const [saved, savedAi, list, waiting, siteState] = await Promise.all([
           send({ type: 'getCriteria' }),
           send({ type: 'getAiSettings' }),
           send({ type: 'listPostings' }),
           send({ type: 'pendingCount' }),
+          send({ type: 'getSiteSettings' }),
         ])
+        setSites(siteState)
         setCriteria(saved)
         setAi(savedAi)
         setPostings(list)
@@ -42,9 +49,10 @@ export function App() {
   }, [])
 
   const refresh = useCallback(async () => {
-    const [list, waiting] = await Promise.all([send({ type: 'listPostings' }), send({ type: 'pendingCount' })])
+    const [list, waiting, siteState] = await Promise.all([send({ type: 'listPostings' }), send({ type: 'pendingCount' }), send({ type: 'getSiteSettings' })])
     setPostings(list)
     setPending(waiting)
+    setSites(siteState)
   }, [])
 
   async function work(task: () => Promise<void>) {
@@ -66,6 +74,21 @@ export function App() {
       setReport(result)
       setScoring(result.scoring)
     })
+
+  const collectSite = (site: string) =>
+    work(async () => {
+      const result = await send({ type: 'collect', site })
+      setReport(result)
+      setScoring(result.scoring)
+    })
+
+  async function toggleSiteOn(id: string, on: boolean) {
+    if (!sites) return
+    const next = toggleSite(sites.settings, id, on)
+    if (next.kind === 'last-site') throw new Error(LAST_SITE_MESSAGE)
+    const settings = await send({ type: 'saveSiteSettings', enabledSites: next.settings.enabledSites })
+    setSites({ ...sites, settings })
+  }
 
   const scoreWaiting = () =>
     work(async () => {
@@ -125,7 +148,7 @@ export function App() {
           오류: {error}
         </p>
       )}
-      {tab && criteria && ai && (
+      {tab && criteria && ai && sites && (
         <>
           <nav className="main-tabs" aria-label="화면">
             <button type="button" aria-current={tab === 'postings' ? 'page' : undefined} onClick={() => setTab('postings')}>
@@ -134,6 +157,9 @@ export function App() {
             <button type="button" aria-current={tab === 'settings' ? 'page' : undefined} onClick={() => setTab('settings')}>
               조건 설정
             </button>
+            <button type="button" aria-current={tab === 'sites' ? 'page' : undefined} onClick={() => setTab('sites')}>
+              {SITES_TAB_LABEL}
+            </button>
           </nav>
           <main>
             <div hidden={tab !== 'postings'}>
@@ -141,6 +167,9 @@ export function App() {
             </div>
             <div hidden={tab !== 'settings'}>
               <SettingsView criteria={criteria} ai={ai} onSave={saveSettings} onDeleteKey={deleteKey} onCheckKey={checkKey} onDevReset={devReset} />
+            </div>
+            <div hidden={tab !== 'sites'}>
+              <SitesView state={sites} busy={busy} canCollect={hasCriteria} onToggle={toggleSiteOn} onCollectSite={(id) => void collectSite(id)} />
             </div>
           </main>
         </>

@@ -143,6 +143,32 @@ input, select, textarea {
 .ai-state { margin: 0; }
 .ai-notes { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
 
+.sites { display: flex; flex-direction: column; gap: 12px; max-width: 720px; }
+.sites .hint { margin: 0; }
+.site-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.site-row { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.site-row.planned { background: transparent; border-style: dashed; }
+.site-row.planned h3 { color: var(--muted); }
+.site-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; }
+.site-head h3 { margin: 0; font-size: 16px; }
+.site-head .state { margin-left: 4px; vertical-align: 2px; }
+.site-url { margin: 0; font-size: 14px; }
+.site-url a { color: var(--accent); }
+.site-row .facts { flex-direction: column; margin: 0; }
+.site-row .facts dt { flex: none; min-width: 5em; }
+.site-row .warn { margin: 0; font-size: 13px; }
+
+.switch { position: relative; display: inline-flex; align-items: center; cursor: pointer; flex: none; }
+.switch input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; padding: 0; cursor: inherit; }
+.switch .track { width: 44px; height: 26px; border-radius: 999px; background: var(--border); position: relative; transition: background 0.15s; }
+.switch .track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 2px rgb(0 0 0 / 0.35); transition: transform 0.15s; }
+.switch input:checked + .track { background: var(--accent); }
+.switch input:checked + .track::after { transform: translateX(18px); }
+.switch input:focus-visible + .track { outline: 3px solid var(--accent); outline-offset: 2px; }
+.switch input:disabled { cursor: not-allowed; }
+.switch input:disabled + .track { opacity: 0.45; }
+.switch-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
 @media (max-width: 640px) {
   .card { flex-direction: column; }
   .score-badge { width: auto; height: auto; flex-direction: row; gap: 4px; align-self: flex-start; padding: 4px 12px; }
