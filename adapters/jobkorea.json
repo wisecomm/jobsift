@@ -1,0 +1,47 @@
+{
+  "id": "jobkorea",
+  "name": "잡코리아",
+  "version": 1,
+  "search": {
+    "urlTemplate": "https://www.jobkorea.co.kr/Search/?stext={keyword}&tabType=recruit&ord=RegDtDesc&Page_No={page}",
+    "firstPage": 1,
+    "pageSize": 20,
+    "maxPages": 10,
+    "requestDelayMs": 1500,
+    "params": [
+      {
+        "criterion": "career",
+        "query": "careerType",
+        "values": { "any": null, "new": "1,4", "experienced": "2,4" }
+      }
+    ]
+  },
+  "extract": {
+    "kind": "next-flight-query",
+    "queryKey": "JOB_LIST",
+    "itemsPath": "state.data.content",
+    "totalPagesPath": "state.data.totalPages",
+    "fields": {
+      "externalId": "id",
+      "title": "title",
+      "company": "companyName",
+      "postedAt": "createdAt",
+      "deadline": "applicationPeriod.end",
+      "careerCode": "careerType",
+      "careerMinYears": "careerRange",
+      "areaCodes": "areaCodeList",
+      "jobTags": "jobClassificationOrIndustry"
+    },
+    "areaCodes": {
+      "queryKey": "CODES",
+      "tablePath": "state.data.area",
+      "codeField": "code",
+      "labelField": "tagDisplayName"
+    },
+    "careerCodes": { "1": "new", "2": "experienced", "3": "newOrExperienced", "4": "any" },
+    "careerMinYearsUnspecified": [0, 100],
+    "jobTagsSeparator": ",",
+    "noDeadlineFromYear": 2070
+  },
+  "postingUrlTemplate": "https://www.jobkorea.co.kr/Recruit/GI_Read/{id}"
+}
