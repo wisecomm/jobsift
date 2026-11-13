@@ -1,8 +1,18 @@
-import type { JobPosting, SearchCriteria } from './types'
+import type { CollectionSummary, SearchCriteria, StoredPosting } from './types'
 
-export interface CollectRequest {
-  type: 'collect'
-  criteria: SearchCriteria
+export type Request =
+  | { type: 'getCriteria' }
+  | { type: 'saveCriteria'; criteria: SearchCriteria }
+  | { type: 'collect' }
+  | { type: 'listPostings' }
+  | { type: 'devReset' }
+
+export interface ResponseData {
+  getCriteria: SearchCriteria
+  saveCriteria: { changed: boolean; removed: number }
+  collect: CollectionSummary
+  listPostings: StoredPosting[]
+  devReset: CollectionSummary
 }
 
-export type CollectResponse = { ok: true; postings: JobPosting[] } | { ok: false; error: string }
+export type ResponseFor<R extends Request> = { ok: true; data: ResponseData[R['type']] } | { ok: false; error: string }
