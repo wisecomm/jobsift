@@ -39,7 +39,7 @@ export function normalizeCriteria(criteria: SearchCriteria): SearchCriteria {
 
 const asSet = (items: readonly string[]) => [...items].sort().join('\n')
 
-/** The description is for AI scoring (stage 4) and does not affect rule results yet. */
+/** Rule fields only. The description, model and score threshold count through `settingsChanged`, and only when AI is on. */
 export function criteriaChanged(before: SearchCriteria, after: SearchCriteria): boolean {
   const a = normalizeCriteria(before)
   const b = normalizeCriteria(after)

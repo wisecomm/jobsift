@@ -1,0 +1,78 @@
+import { describe, expect, it } from 'vitest'
+import { loadAiSettings, mergeAiInput, normalizeAiSettings, settingsChanged, storeAiSettings, toAiView, type StorageArea } from '../src/ai/settings'
+import { criteria } from './helpers'
+
+const KEY = 'fake-key-for-local-test'
+
+function memoryArea(): StorageArea & { data: Record<string, unknown> } {
+  const data: Record<string, unknown> = {}
+  return {
+    data,
+    get: async (key) => (key in data ? { [key]: data[key] } : {}),
+    set: async (items) => void Object.assign(data, items),
+  }
+}
+
+const ai = (over: Partial<{ apiKey: string; model: string; minScore: number }> = {}) => ({ apiKey: KEY, model: 'm', minScore: 60, ...over })
+
+describe('AI settings storage', () => {
+  it('falls back to defaults: no key, default model, minScore 60', async () => {
+    expect(await loadAiSettings(memoryArea())).toEqual({ apiKey: '', model: 'gemini-3.5-flash-lite', minScore: 60 })
+  })
+
+  it('round-trips and normalizes', async () => {
+    const area = memoryArea()
+    await storeAiSettings(area, normalizeAiSettings({ apiKey: ` ${KEY} `, model: '  ', minScore: 140.4 }))
+    expect(await loadAiSettings(area)).toEqual({ apiKey: KEY, model: 'gemini-3.5-flash-lite', minScore: 100 })
+  })
+
+  it('treats unreadable storage as defaults', async () => {
+    const area = memoryArea()
+    area.data['aiSettings'] = { apiKey: 5 }
+    expect((await loadAiSettings(area)).apiKey).toBe('')
+  })
+})
+
+describe('the page view', () => {
+  it('never carries the key', () => {
+    const view = toAiView(ai())
+    expect(view).toEqual({ hasKey: true, model: 'm', minScore: 60 })
+    expect(JSON.stringify(view)).not.toContain(KEY)
+    expect(toAiView(ai({ apiKey: '' })).hasKey).toBe(false)
+  })
+})
+
+describe('mergeAiInput', () => {
+  it('keeps the saved key when the key field is empty, and replaces it otherwise', () => {
+    expect(mergeAiInput(ai(), { apiKey: '', model: 'n', minScore: 70 })).toEqual(ai({ model: 'n', minScore: 70 }))
+    expect(mergeAiInput(ai(), { apiKey: ' new-key ', model: 'm', minScore: 60 }).apiKey).toBe('new-key')
+  })
+})
+
+describe('settingsChanged', () => {
+  const base = { criteria: criteria({ description: '전산' }), ai: ai() }
+
+  it('is false when nothing relevant differs', () => {
+    expect(settingsChanged(base, { criteria: criteria({ description: ' 전산 ' }), ai: ai({ apiKey: 'other-key' }) })).toBe(false)
+  })
+
+  it('notices turning AI on or off', () => {
+    expect(settingsChanged(base, { ...base, ai: ai({ apiKey: '' }) })).toBe(true)
+    expect(settingsChanged({ ...base, ai: ai({ apiKey: '' }) }, base)).toBe(true)
+  })
+
+  it('notices description, minScore and model changes while AI is on', () => {
+    expect(settingsChanged(base, { ...base, criteria: criteria({ description: '회계' }) })).toBe(true)
+    expect(settingsChanged(base, { ...base, ai: ai({ minScore: 70 }) })).toBe(true)
+    expect(settingsChanged(base, { ...base, ai: ai({ model: 'other' }) })).toBe(true)
+  })
+
+  it('ignores those three while AI is off, since they change nothing', () => {
+    const off = { criteria: criteria({ description: '전산' }), ai: ai({ apiKey: '' }) }
+    expect(settingsChanged(off, { criteria: criteria({ description: '회계' }), ai: ai({ apiKey: '', minScore: 10, model: 'z' }) })).toBe(false)
+  })
+
+  it('still notices a rule change', () => {
+    expect(settingsChanged(base, { ...base, criteria: criteria({ description: '전산', locations: ['서울'] }) })).toBe(true)
+  })
+})
