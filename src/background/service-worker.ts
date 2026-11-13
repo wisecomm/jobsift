@@ -21,10 +21,20 @@ chrome.action.onClicked.addListener(() => {
   void chrome.tabs.create({ url: chrome.runtime.getURL('src/page/index.html') })
 })
 
+const PAGE_TIMEOUT_MS = 30_000
+
+// A site that holds the connection open must fail this keyword, not freeze every site behind it.
 async function fetchHtml(url: string): Promise<string> {
-  const response = await fetch(url, { credentials: 'omit' })
-  if (!response.ok) throw new Error(`요청 실패 (${response.status}): ${url}`)
-  return response.text()
+  try {
+    const response = await fetch(url, { credentials: 'omit', signal: AbortSignal.timeout(PAGE_TIMEOUT_MS) })
+    if (!response.ok) throw new Error(`요청 실패 (${response.status}): ${url}`)
+    return await response.text()
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'TimeoutError') {
+      throw new Error(`${PAGE_TIMEOUT_MS / 1000}초 안에 응답이 없어 이 키워드 수집을 멈췄습니다: ${new URL(url).host}`)
+    }
+    throw error
+  }
 }
 
 async function readCriteria(): Promise<SearchCriteria> {
