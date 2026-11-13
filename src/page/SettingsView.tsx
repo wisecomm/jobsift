@@ -1,24 +1,32 @@
 import { useState } from 'react'
-import type { CareerFilter, SearchCriteria } from '../shared/types'
+import type { AiInput } from '../ai/settings'
+import type { AiSettingsView, CareerFilter, SearchCriteria } from '../shared/types'
+import { DEFAULT_MODEL } from '../ai/constants'
 import { SAMPLE_DESCRIPTIONS } from './sampleDescriptions'
 
 interface Props {
   criteria: SearchCriteria
-  /** Resolves with the user-facing result message. */
-  onSave: (criteria: SearchCriteria) => Promise<string>
+  ai: AiSettingsView
+  /** Each handler resolves with the user-facing result message, or throws a Korean error message. */
+  onSave: (criteria: SearchCriteria, ai: AiInput) => Promise<string>
+  onCheckKey: (apiKey: string, model: string) => Promise<string>
+  onDeleteKey: () => Promise<string>
   onDevReset: () => Promise<void>
 }
 
 const toList = (text: string) => text.split(',').map((item) => item.trim()).filter(Boolean)
 const fromList = (items: string[]) => items.join(', ')
 
-export function SettingsView({ criteria, onSave, onDevReset }: Props) {
+export function SettingsView({ criteria, ai, onSave, onCheckKey, onDeleteKey, onDevReset }: Props) {
   const [keywords, setKeywords] = useState(fromList(criteria.keywords))
   const [excludeKeywords, setExcludeKeywords] = useState(fromList(criteria.excludeKeywords))
   const [locations, setLocations] = useState(fromList(criteria.locations))
   const [career, setCareer] = useState<CareerFilter>(criteria.career)
   const [days, setDays] = useState(String(criteria.initialDays))
   const [description, setDescription] = useState(criteria.description)
+  const [apiKey, setApiKey] = useState('')
+  const [model, setModel] = useState(ai.model)
+  const [minScore, setMinScore] = useState(String(ai.minScore))
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null)
 
@@ -36,7 +44,17 @@ export function SettingsView({ criteria, onSave, onDevReset }: Props) {
   }
 
   const save = () =>
-    run(() => onSave({ keywords: toList(keywords), excludeKeywords: toList(excludeKeywords), locations: toList(locations), career, initialDays: Number(days), description }))
+    run(async () => {
+      const text = await onSave(
+        { keywords: toList(keywords), excludeKeywords: toList(excludeKeywords), locations: toList(locations), career, initialDays: Number(days), description },
+        { apiKey, model, minScore: Number(minScore) },
+      )
+      setApiKey('')
+      return text
+    })
+
+  const deleteKey = () =>
+    window.confirm('저장된 API 키를 지웁니다. AI 채점이 꺼지고 키워드 규칙만 쓰게 됩니다. 계속할까요?') ? run(onDeleteKey) : undefined
 
   function useSample(text: string) {
     if (description.trim() !== '' && description !== text && !window.confirm('지금 적은 내용이 예시로 바뀝니다. 계속할까요?')) return
@@ -86,7 +104,7 @@ export function SettingsView({ criteria, onSave, onDevReset }: Props) {
         <label>
           내가 원하는 일
           <textarea rows={7} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="어떤 일을 하고 싶은지, 어떤 일은 피하고 싶은지 편하게 적어 주세요." />
-          <small>이 글은 나중에 추가될 AI 점수 기능에서 공고가 나와 맞는지 판단하는 데 쓰입니다.</small>
+          <small>AI 채점을 켜면 이 글을 기준으로 공고가 나와 맞는지 점수를 매깁니다. API 키가 없으면 쓰이지 않습니다.</small>
         </label>
         <div className="samples" role="group" aria-label="예시">
           <span>예시로 채우기</span>
@@ -97,6 +115,47 @@ export function SettingsView({ criteria, onSave, onDevReset }: Props) {
           ))}
         </div>
       </div>
+
+      <fieldset className="ai">
+        <legend>AI 채점</legend>
+        <p className="ai-state">
+          {ai.hasKey ? <span className="ok">키 저장됨 · AI 채점 켜짐</span> : <span className="hint">키가 없으면 키워드 규칙만 사용합니다.</span>}
+        </p>
+        <label>
+          Gemini API 키
+          <input
+            type="password"
+            autoComplete="off"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder={ai.hasKey ? '키 저장됨 (바꾸려면 새 키를 입력)' : 'Google AI Studio에서 받은 키'}
+          />
+        </label>
+        <div className="row">
+          <label>
+            모델
+            <input value={model} onChange={(e) => setModel(e.target.value)} placeholder={DEFAULT_MODEL} />
+          </label>
+          <label>
+            기준 점수 (0~100)
+            <input type="number" min={0} max={100} value={minScore} onChange={(e) => setMinScore(e.target.value)} />
+            <small>이 점수 이상인 공고만 목록에 남깁니다.</small>
+          </label>
+        </div>
+        <div className="form-actions">
+          <button type="button" disabled={pending || (!ai.hasKey && apiKey.trim() === '')} onClick={() => void run(() => onCheckKey(apiKey, model))}>
+            키 확인
+          </button>
+          <button type="button" disabled={pending || !ai.hasKey} onClick={() => void deleteKey()}>
+            키 삭제
+          </button>
+        </div>
+        <ul className="ai-notes">
+          <li>키는 이 브라우저 프로필에 암호화 없이 저장되며, Google 외에는 어디로도 보내지 않습니다.</li>
+          <li>채점할 때 공고의 제목, 회사, 직무 태그, 경력, 지역과 위의 "내가 원하는 일" 글이 Google로 전송됩니다.</li>
+          <li>사용량 제한이나 요금은 내 키를 기준으로 Google이 정합니다.</li>
+        </ul>
+      </fieldset>
 
       <div className="form-actions">
         <button type="submit" className="primary" disabled={pending}>저장</button>

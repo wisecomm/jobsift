@@ -1,4 +1,4 @@
-import type { CollectionSummary } from '../shared/types'
+import type { CollectionSummary, ScoringSummary } from '../shared/types'
 
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -36,10 +36,15 @@ export function locationSummary(locations: readonly string[]): string {
 
 export function summaryLine(s: CollectionSummary): string {
   const g = s.discardedByGate
+  const stored = s.scoring ? `채점 대기열에 ${s.queued}건 추가` : `저장 ${s.saved}건`
   return (
-    `이번 수집: 확인 ${s.scanned}건 · 저장 ${s.saved}건 · 제외 ${s.discarded}건 ` +
+    `이번 수집: 확인 ${s.scanned}건 · ${stored} · 제외 ${s.discarded}건 ` +
     `(키워드 불일치 ${g.keywordMismatch}, 지역 ${g.location}, 경력 ${g.career}, 제외어 ${g.excludeKeyword}, 마감 ${g.expired}) · 마감 처리 ${s.expiredMarked}건`
   )
+}
+
+export function scoringLine(r: ScoringSummary): string {
+  return `AI 채점: ${r.scored}건 채점 · 저장 ${r.kept}건 · 점수 미달 ${r.lowScore}건 · 채점 대기 ${r.pendingLeft}건`
 }
 
 /** Plain-language notes for keywords whose run did not finish normally. */

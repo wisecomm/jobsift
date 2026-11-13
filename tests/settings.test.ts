@@ -42,6 +42,16 @@ describe('the page view', () => {
   })
 })
 
+describe('the view built from stored settings', () => {
+  it('carries no key, even when the stored key is long and distinctive', async () => {
+    const area = memoryArea()
+    await storeAiSettings(area, mergeAiInput(await loadAiSettings(area), { apiKey: KEY, model: '', minScore: 55 }))
+    const view = toAiView(await loadAiSettings(area))
+    expect(view).toEqual({ hasKey: true, model: 'gemini-3.5-flash-lite', minScore: 55 })
+    expect(JSON.stringify(view)).not.toContain(KEY)
+  })
+})
+
 describe('mergeAiInput', () => {
   it('keeps the saved key when the key field is empty, and replaces it otherwise', () => {
     expect(mergeAiInput(ai(), { apiKey: '', model: 'n', minScore: 70 })).toEqual(ai({ model: 'n', minScore: 70 }))

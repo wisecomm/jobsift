@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { careerLabel } from '../src/shared/career'
-import { deadlineLabel, locationSummary, stopNotices } from '../src/page/format'
+import { deadlineLabel, locationSummary, scoringLine, stopNotices, summaryLine } from '../src/page/format'
 import { SAMPLE_DESCRIPTIONS } from '../src/page/sampleDescriptions'
 import type { CollectionSummary } from '../src/shared/types'
 
@@ -66,5 +66,21 @@ describe('stopNotices', () => {
 describe('SAMPLE_DESCRIPTIONS', () => {
   it('offers the four labelled samples', () => {
     expect(SAMPLE_DESCRIPTIONS.map((s) => s.label)).toEqual(['공공기관 전산직', '사무·행정', '생산·기술직', '경력 개발자'])
+  })
+})
+
+describe('collection and scoring lines', () => {
+  const base: CollectionSummary = {
+    scanned: 25, saved: 0, queued: 25, scoring: null, discarded: 0, expiredMarked: 0, errors: {}, stopReasons: {},
+    discardedByGate: { expired: 0, excludeKeyword: 0, keywordMismatch: 0, location: 0, career: 0, lowScore: 0 },
+  }
+
+  it('says saved in rules-only mode and queued in AI mode', () => {
+    expect(summaryLine({ ...base, saved: 3, queued: 0 })).toContain('저장 3건')
+    expect(summaryLine({ ...base, scoring: { scored: 0, kept: 0, lowScore: 0, pendingLeft: 25, error: null } })).toContain('채점 대기열에 25건 추가')
+  })
+
+  it('reports scored, kept, low-score and pending counts', () => {
+    expect(scoringLine({ scored: 20, kept: 9, lowScore: 11, pendingLeft: 5, error: null })).toBe('AI 채점: 20건 채점 · 저장 9건 · 점수 미달 11건 · 채점 대기 5건')
   })
 })

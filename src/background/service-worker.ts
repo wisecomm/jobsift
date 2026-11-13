@@ -1,9 +1,15 @@
 import jobkoreaJson from '../../adapters/jobkorea.json'
 import { parseAdapter } from '../adapter/schema'
+import { REQUEST_GAP_MS } from '../ai/constants'
+import { aiErrorMessage, checkKey, scoreBatch } from '../ai/gemini'
+import { createPacer } from '../ai/pacer'
+import { buildInstruction } from '../ai/prompt'
+import { aiEnabled, loadAiSettings, mergeAiInput, normalizeAiSettings, settingsChanged, storeAiSettings, toAiView, type SettingsSnapshot } from '../ai/settings'
 import { applyCriteriaChange } from '../engine/applyCriteriaChange'
-import { criteriaChanged, normalizeCriteria, parseCriteria } from '../engine/criteria'
+import { normalizeCriteria, parseCriteria } from '../engine/criteria'
 import { runCollection } from '../engine/runCollection'
-import type { Request, ResponseData, ResponseFor } from '../shared/messages'
+import { scorePending, toScoringSummary, type ScoringDeps } from '../engine/scorePending'
+import type { Request, ResponseData, ResponseFor, SettingsResult } from '../shared/messages'
 import type { SearchCriteria } from '../shared/types'
 import { openStore } from '../storage/store'
 
@@ -34,26 +40,73 @@ function exclusive<T>(task: () => Promise<T>): Promise<T> {
   return result
 }
 
+const pace = createPacer(REQUEST_GAP_MS, Date.now, (ms) => new Promise((resolve) => setTimeout(resolve, ms)))
+
+/** Defined exactly when AI is on. */
+async function scoringDeps(criteria: SearchCriteria): Promise<ScoringDeps | undefined> {
+  const ai = await loadAiSettings(chrome.storage.local)
+  if (!aiEnabled(ai)) return undefined
+  const instruction = buildInstruction(criteria)
+  return {
+    minScore: ai.minScore,
+    now: new Date(),
+    pace,
+    score: (items) => scoreBatch(ai, instruction, items, { fetch: (url, init) => fetch(url, init) }),
+  }
+}
+
 async function collectNow(): Promise<ResponseData['collect']> {
   const [store, criteria] = await Promise.all([storePromise, readCriteria()])
-  return runCollection(adapter, criteria, store, { fetchHtml, now: new Date() })
+  return runCollection(adapter, criteria, store, { fetchHtml, now: new Date(), scoring: await scoringDeps(criteria) })
+}
+
+async function commitSettings(next: SettingsSnapshot): Promise<SettingsResult> {
+  const prev = { criteria: await readCriteria(), ai: await loadAiSettings(chrome.storage.local) }
+  const changed = settingsChanged(prev, next)
+  // Cleanup runs before persisting so an interrupted cleanup is redone by the next save, which still sees a change.
+  const { removed, queued } = changed
+    ? await applyCriteriaChange(await storePromise, adapter.id, next.criteria, { aiOn: aiEnabled(next.ai) }, new Date())
+    : { removed: 0, queued: 0 }
+  await chrome.storage.local.set({ [CRITERIA_KEY]: next.criteria })
+  await storeAiSettings(chrome.storage.local, next.ai)
+  return { changed, removed, queued }
 }
 
 async function handle(request: Request): Promise<ResponseData[Request['type']]> {
   switch (request.type) {
     case 'getCriteria':
       return readCriteria()
-    case 'saveCriteria':
-      return exclusive(async () => {
-        const next = normalizeCriteria(request.criteria)
-        const changed = criteriaChanged(await readCriteria(), next)
-        // Cleanup runs before persisting so an interrupted cleanup is redone by the next save, which still sees a change.
-        const removed = changed ? (await applyCriteriaChange(await storePromise, adapter.id, next, { aiOn: false }, new Date())).removed : 0
-        await chrome.storage.local.set({ [CRITERIA_KEY]: next })
-        return { changed, removed }
-      })
+    case 'getAiSettings':
+      return toAiView(await loadAiSettings(chrome.storage.local))
+    case 'saveSettings':
+      return exclusive(async () =>
+        commitSettings({
+          criteria: normalizeCriteria(request.criteria),
+          ai: mergeAiInput(await loadAiSettings(chrome.storage.local), request.ai),
+        }),
+      )
+    case 'deleteAiKey':
+      return exclusive(async () =>
+        commitSettings({ criteria: await readCriteria(), ai: { ...(await loadAiSettings(chrome.storage.local)), apiKey: '' } }),
+      )
+    case 'checkAiKey': {
+      const saved = await loadAiSettings(chrome.storage.local)
+      const settings = normalizeAiSettings({ ...saved, apiKey: request.apiKey.trim() || saved.apiKey, model: request.model })
+      if (!aiEnabled(settings)) return { ok: false, message: 'API 키를 먼저 입력해 주세요.' }
+      const result = await checkKey(settings, { fetch: (url, init) => fetch(url, init) })
+      return result.kind === 'ok' ? { ok: true } : { ok: false, message: aiErrorMessage(result.error) }
+    }
     case 'collect':
       return exclusive(collectNow)
+    case 'scorePending':
+      return exclusive(async () => {
+        const deps = await scoringDeps(await readCriteria())
+        const store = await storePromise
+        if (!deps) return { scored: 0, kept: 0, lowScore: 0, pendingLeft: (await store.listPending(adapter.id)).length, error: 'AI 채점이 꺼져 있습니다. 조건 설정에서 API 키를 저장해 주세요.' }
+        return toScoringSummary(await scorePending(store, adapter.id, deps))
+      })
+    case 'pendingCount':
+      return (await (await storePromise).listPending(adapter.id)).length
     case 'listPostings':
       return (await storePromise).listPostings(adapter.id)
     case 'updatePosting':
