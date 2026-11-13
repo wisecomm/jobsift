@@ -58,7 +58,9 @@ export async function openStore(name = DB_NAME): Promise<Store> {
     deletePosting: (key) => db.delete('postings', keyOf(key)),
 
     listDiscards: (site) => db.getAll('discards', siteRange(site)),
-    putDiscard: async (record) => void (await db.put('discards', record)),
+    // Copy the known fields so a caller passing a whole posting cannot leak its title or url into the record.
+    putDiscard: async ({ site, externalId, reason, discardedAt, deadline }) =>
+      void (await db.put('discards', { site, externalId, reason, discardedAt, deadline })),
     async deleteDiscards(keys) {
       const tx = db.transaction('discards', 'readwrite')
       await Promise.all([...keys.map((key) => tx.store.delete(keyOf(key))), tx.done])

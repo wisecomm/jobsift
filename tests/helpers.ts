@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs'
+import { IDBFactory } from 'fake-indexeddb'
 import jobkoreaJson from '../adapters/jobkorea.json'
 import { parseAdapter } from '../src/adapter/schema'
+import { openStore } from '../src/storage/store'
 import type { JobPosting, SearchCriteria } from '../src/shared/types'
 
 export const adapter = parseAdapter(jobkoreaJson)
@@ -65,4 +67,10 @@ export function fakePage(items: FakeItem[], totalPages: number): string {
     JSON.stringify(entry('CODES', { area: Object.entries(AREA_LABELS).map(([code, tagDisplayName]) => ({ code, tagDisplayName })) })) +
     JSON.stringify(entry('JOB_LIST', { pageNumber: 0, totalPages, totalElements: 0, content }))
   return `<html><script>self.__next_f.push([1,${JSON.stringify(payload)}])</script></html>`
+}
+
+/** A store on its own empty fake database, so tests never share state. */
+export async function freshStore() {
+  Object.assign(globalThis, { indexedDB: new IDBFactory() })
+  return openStore()
 }

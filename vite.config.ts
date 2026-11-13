@@ -8,5 +8,5 @@ export default defineConfig({
   build: {
     rollupOptions: { input: { page: 'src/page/index.html' } },
   },
-  test: { include: ['tests/**/*.test.ts'] },
+  test: { include: ['tests/**/*.test.ts'], setupFiles: ['tests/setup.ts'] },
 })
