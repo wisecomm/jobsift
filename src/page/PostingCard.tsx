@@ -16,6 +16,12 @@ export function PostingCard({ posting: p, now, onUpdate }: Props) {
   const key = { site: p.site, externalId: p.externalId }
   return (
     <li className={`card status-${p.status}`}>
+      {p.score !== null && (
+        <div className="score-badge" aria-label={`AI 점수 ${p.score}점`}>
+          <strong>{p.score}</strong>
+          <span>점</span>
+        </div>
+      )}
       <div className="card-main">
         <h3>
           <a href={p.url} target="_blank" rel="noreferrer">
@@ -46,10 +52,9 @@ export function PostingCard({ posting: p, now, onUpdate }: Props) {
             ))}
           </ul>
         )}
-        {p.score !== null && (
-          <p className="score">
-            <strong>점수 {p.score}</strong>
-            {p.scoreReason && <span> {p.scoreReason}</span>}
+        {p.score !== null && p.scoreReason && (
+          <p className="reason" title={p.scoreReason}>
+            {p.scoreReason}
           </p>
         )}
         <MemoField key={p.memo} memo={p.memo} onSave={(memo) => onUpdate(key, { memo })} />
