@@ -1,4 +1,4 @@
-import type { CollectionSummary, ScoringSummary } from '../shared/types'
+import type { CollectionReport, CollectionSummary, ScoringSummary, SiteRunStatus } from '../shared/types'
 
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -34,13 +34,38 @@ export function locationSummary(locations: readonly string[]): string {
   return locations.length > 2 ? `${shown} 외 ${locations.length - 2}곳` : shown
 }
 
-export function summaryLine(s: CollectionSummary): string {
+type Totals = Omit<CollectionSummary, 'stopReasons' | 'errors'>
+
+function summaryBody(s: Totals): string {
   const g = s.discardedByGate
-  const stored = s.scoring ? `채점 대기열에 ${s.queued}건 추가` : `저장 ${s.saved}건`
+  const stored = s.aiOn ? `채점 대기열에 ${s.queued}건 추가` : `저장 ${s.saved}건`
   return (
-    `이번 수집: 확인 ${s.scanned}건 · ${stored} · 제외 ${s.discarded}건 ` +
+    `확인 ${s.scanned}건 · ${stored} · 제외 ${s.discarded}건 ` +
     `(키워드 불일치 ${g.keywordMismatch}, 지역 ${g.location}, 경력 ${g.career}, 제외어 ${g.excludeKeyword}, 마감 ${g.expired}) · 마감 처리 ${s.expiredMarked}건`
   )
+}
+
+export const summaryLine = (s: Totals) => `이번 수집: ${summaryBody(s)}`
+
+export function combineSummaries(summaries: readonly CollectionSummary[]): Totals {
+  const total: Totals = {
+    scanned: 0,
+    saved: 0,
+    queued: 0,
+    aiOn: summaries.some((s) => s.aiOn),
+    discarded: 0,
+    discardedByGate: { expired: 0, excludeKeyword: 0, keywordMismatch: 0, location: 0, career: 0, lowScore: 0 },
+    expiredMarked: 0,
+  }
+  for (const s of summaries) {
+    total.scanned += s.scanned
+    total.saved += s.saved
+    total.queued += s.queued
+    total.discarded += s.discarded
+    total.expiredMarked += s.expiredMarked
+    for (const gate of Object.keys(total.discardedByGate) as (keyof Totals['discardedByGate'])[]) total.discardedByGate[gate] += s.discardedByGate[gate]
+  }
+  return total
 }
 
 export function scoringLine(r: ScoringSummary): string {
@@ -54,4 +79,40 @@ export function stopNotices(s: CollectionSummary): string[] {
     if (reason === 'error') return [`"${keyword}": 수집 중 오류가 나서 중단했습니다. ${s.errors[keyword] ?? ''}`.trim()]
     return []
   })
+}
+
+export interface ReportLines {
+  /** All sites that finished, added up. `null` when none did. */
+  total: string | null
+  /** One line per site, only when more than one ran. */
+  perSite: { site: string; text: string }[]
+  notices: string[]
+}
+
+export function reportLines({ runs }: CollectionReport, nameOf: (site: string) => string): ReportLines {
+  const several = runs.length > 1
+  const prefix = (site: string) => (several ? `${nameOf(site)}: ` : '')
+  const finished = runs.flatMap((run) => (run.result.kind === 'ok' ? [run.result.summary] : []))
+  return {
+    total: finished.length > 0 ? summaryLine(combineSummaries(finished)) : null,
+    perSite: several
+      ? runs.map(({ site, result }) => ({ site, text: result.kind === 'ok' ? summaryBody(result.summary) : '수집하지 못했습니다.' }))
+      : [],
+    notices: runs.flatMap(({ site, result }) =>
+      result.kind === 'ok'
+        ? stopNotices(result.summary).map((notice) => prefix(site) + notice)
+        : [`${prefix(site)}수집하지 못했습니다. ${result.message}`],
+    ),
+  }
+}
+
+export function formatDateTime(iso: string): string {
+  return new Date(Date.parse(iso) + KST_OFFSET_MS).toISOString().slice(0, 16).replace('T', ' ')
+}
+
+/** The line a site row shows for its latest run. */
+export function runStatusLine(run: SiteRunStatus | undefined): string {
+  if (!run) return '아직 수집한 적이 없습니다.'
+  const when = formatDateTime(run.at)
+  return run.result.kind === 'ok' ? `${when} · ${summaryBody(run.result.summary)}` : `${when} · 수집하지 못했습니다. ${run.result.message}`
 }

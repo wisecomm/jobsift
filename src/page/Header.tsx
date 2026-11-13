@@ -1,17 +1,19 @@
-import type { CollectionSummary, ScoringSummary } from '../shared/types'
-import { scoringLine, stopNotices, summaryLine } from './format'
+import type { CollectionReport, ScoringSummary } from '../shared/types'
+import { reportLines, scoringLine } from './format'
+import { siteName } from './sites'
 
 interface Props {
   busy: boolean
   canCollect: boolean
-  summary: CollectionSummary | null
+  report: CollectionReport | null
   scoring: ScoringSummary | null
   pending: number
   onCollect: () => void
   onScorePending: () => void
 }
 
-export function Header({ busy, canCollect, summary, scoring, pending, onCollect, onScorePending }: Props) {
+export function Header({ busy, canCollect, report, scoring, pending, onCollect, onScorePending }: Props) {
+  const lines = report && reportLines(report, siteName)
   return (
     <header className="app-header">
       <h1>채용공고 모음</h1>
@@ -21,9 +23,14 @@ export function Header({ busy, canCollect, summary, scoring, pending, onCollect,
         </button>
         {!canCollect && <span className="hint">조건 설정에서 키워드를 저장하면 수집할 수 있습니다.</span>}
       </div>
-      {(summary || scoring || pending > 0) && (
+      {(report || scoring || pending > 0) && (
         <div className="summary">
-          {summary && <p data-testid="summary">{summaryLine(summary)}</p>}
+          {lines?.total && <p data-testid="summary">{lines.total}</p>}
+          {lines?.perSite.map(({ site, text }) => (
+            <p key={site} data-testid="site-summary">
+              {siteName(site)}: {text}
+            </p>
+          ))}
           {scoring && <p data-testid="scoring">{scoringLine(scoring)}</p>}
           {scoring?.error && (
             <p role="alert" className="warn">
@@ -38,7 +45,7 @@ export function Header({ busy, canCollect, summary, scoring, pending, onCollect,
               </button>
             </p>
           )}
-          {summary && stopNotices(summary).map((notice) => (
+          {lines?.notices.map((notice) => (
             <p key={notice} role="alert" className="warn">
               {notice}
             </p>

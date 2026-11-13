@@ -43,7 +43,7 @@ describe('scorePending', () => {
   it('keeps scores at or above minScore and discards the rest as identity-only records', async () => {
     const store = await queued(25)
     const log: string[] = []
-    const pass = await scorePending(store, 'jobkorea', deps(log, scorer(log), 22))
+    const pass = await scorePending(store, deps(log, scorer(log), 22))
 
     expect(pass).toMatchObject({ scored: 25, kept: 4, lowScore: 21, pendingLeft: 0, error: null })
     const kept = await store.listPostings('jobkorea')
@@ -70,7 +70,7 @@ describe('scorePending', () => {
   it('sends batches of ten and paces before every request', async () => {
     const store = await queued(25)
     const log: string[] = []
-    await scorePending(store, 'jobkorea', deps(log, scorer(log)))
+    await scorePending(store, deps(log, scorer(log)))
     expect(log).toEqual(['pace', 'score#1(10)', 'pace', 'score#2(10)', 'pace', 'score#3(5)'])
   })
 
@@ -82,14 +82,14 @@ describe('scorePending', () => {
       log.push(`pending before request: ${left}`)
       return scorer([], undefined)(items)
     }
-    await scorePending(store, 'jobkorea', deps(log, inspecting))
+    await scorePending(store, deps(log, inspecting))
     expect(log.filter((l) => l.startsWith('pending'))).toEqual(['pending before request: 25', 'pending before request: 15', 'pending before request: 5'])
   })
 
   it('stops at the first failed batch, keeps earlier batches, and leaves the rest pending', async () => {
     const store = await queued(25)
     const log: string[] = []
-    const pass = await scorePending(store, 'jobkorea', deps(log, scorer(log, { onCall: 2, error: { kind: 'error', error: { kind: 'rateLimited' } } })))
+    const pass = await scorePending(store, deps(log, scorer(log, { onCall: 2, error: { kind: 'error', error: { kind: 'rateLimited' } } })))
 
     expect(pass).toMatchObject({ scored: 10, pendingLeft: 15, error: { kind: 'rateLimited' } })
     expect(log.filter((l) => l.startsWith('score'))).toEqual(['score#1(10)', 'score#2(10)'])
@@ -102,8 +102,8 @@ describe('scorePending', () => {
   it('resumes on the next call and finishes the rest', async () => {
     const store = await queued(25)
     const log: string[] = []
-    await scorePending(store, 'jobkorea', deps(log, scorer(log, { onCall: 2, error: { kind: 'error', error: { kind: 'rateLimited' } } })))
-    const second = await scorePending(store, 'jobkorea', deps(log, scorer(log)))
+    await scorePending(store, deps(log, scorer(log, { onCall: 2, error: { kind: 'error', error: { kind: 'rateLimited' } } })))
+    const second = await scorePending(store, deps(log, scorer(log)))
 
     expect(second).toMatchObject({ scored: 15, pendingLeft: 0, error: null })
     expect(await store.listPending('jobkorea')).toEqual([])
@@ -113,7 +113,7 @@ describe('scorePending', () => {
   it('does nothing and sends no request when the queue is empty', async () => {
     const store = await freshStore()
     const log: string[] = []
-    expect(await scorePending(store, 'jobkorea', deps(log, scorer(log)))).toEqual({ scored: 0, kept: 0, lowScore: 0, pendingLeft: 0, error: null })
+    expect(await scorePending(store, deps(log, scorer(log)))).toEqual({ scored: 0, kept: 0, lowScore: 0, pendingLeft: 0, error: null })
     expect(log).toEqual([])
   })
 })

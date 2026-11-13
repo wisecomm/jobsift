@@ -116,8 +116,8 @@ export interface CollectionSummary {
   saved: number
   /** Postings sent to the scoring queue instead of being stored (AI on). */
   queued: number
-  /** `null` in rules-only mode. */
-  scoring: ScoringSummary | null
+  /** Whether this run queued passes for AI scoring instead of storing them. */
+  aiOn: boolean
   discarded: number
   discardedByGate: Record<RejectGate, number>
   expiredMarked: number
@@ -128,4 +128,20 @@ export interface CollectionSummary {
 /** The sites collection uses. Always holds at least one id of an available adapter. */
 export interface SiteSettings {
   enabledSites: string[]
+}
+
+export type SiteRunResult = { kind: 'ok'; summary: CollectionSummary } | { kind: 'error'; message: string }
+
+/** What one site's latest collection did. An `error` means the whole site run threw, as opposed to a keyword failing inside it. */
+export interface SiteRunStatus {
+  site: string
+  /** ISO time the run started. */
+  at: string
+  result: SiteRunResult
+}
+
+export interface CollectionReport {
+  runs: SiteRunStatus[]
+  /** `null` in rules-only mode. */
+  scoring: ScoringSummary | null
 }

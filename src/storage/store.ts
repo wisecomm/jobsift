@@ -2,7 +2,8 @@ import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
 import type { CollectState, DiscardRecord, PendingPosting, PostingKey, PostingPatch, StoredPosting, UpdateResult } from '../shared/types'
 
 export interface Store {
-  listPostings(site: string): Promise<StoredPosting[]>
+  /** Every site's postings when `site` is omitted. */
+  listPostings(site?: string): Promise<StoredPosting[]>
   getPosting(key: PostingKey): Promise<StoredPosting | undefined>
   putPosting(posting: StoredPosting): Promise<void>
   /** Stores the posting only if its key is free, so a re-collect never resets status or memo. Returns whether it was stored. */
@@ -17,7 +18,8 @@ export interface Store {
   putDiscard(record: DiscardRecord): Promise<void>
   deleteDiscards(keys: PostingKey[]): Promise<void>
 
-  listPending(site: string): Promise<PendingPosting[]>
+  /** Every site's pending postings when `site` is omitted. */
+  listPending(site?: string): Promise<PendingPosting[]>
   putPending(posting: PendingPosting): Promise<void>
   deletePending(keys: PostingKey[]): Promise<void>
   /** Resolves scored pending postings in one transaction, so an interruption never leaves one both queued and stored, or neither. */
@@ -60,7 +62,7 @@ export async function openStore(name = DB_NAME): Promise<Store> {
   })
 
   return {
-    listPostings: (site) => db.getAll('postings', siteRange(site)),
+    listPostings: (site) => db.getAll('postings', site === undefined ? undefined : siteRange(site)),
     getPosting: (key) => db.get('postings', keyOf(key)),
     putPosting: async (posting) => void (await db.put('postings', posting)),
     async addPosting(posting) {
@@ -108,7 +110,7 @@ export async function openStore(name = DB_NAME): Promise<Store> {
       await Promise.all([...keys.map((key) => tx.store.delete(keyOf(key))), tx.done])
     },
 
-    listPending: (site) => db.getAll('pending', siteRange(site)),
+    listPending: (site) => db.getAll('pending', site === undefined ? undefined : siteRange(site)),
     putPending: async (posting) => void (await db.put('pending', posting)),
     async deletePending(keys) {
       const tx = db.transaction('pending', 'readwrite')

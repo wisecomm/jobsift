@@ -1,0 +1,61 @@
+{
+  "id": "second",
+  "name": "두번째 사이트",
+  "homeUrl": "https://second.test",
+  "requiresLogin": false,
+  "version": 1,
+  "search": {
+    "urlTemplate": "https://second.test/search?q={keyword}&page={page}",
+    "firstPage": 1,
+    "pageSize": 20,
+    "maxPages": 60,
+    "requestDelayMs": 0,
+    "params": [
+      {
+        "criterion": "career",
+        "query": "careerType",
+        "values": {
+          "any": null,
+          "new": "1,4",
+          "experienced": "2,4"
+        }
+      }
+    ]
+  },
+  "extract": {
+    "kind": "next-flight-query",
+    "queryKey": "JOB_LIST",
+    "itemsPath": "state.data.content",
+    "totalPagesPath": "state.data.totalPages",
+    "fields": {
+      "externalId": "id",
+      "title": "title",
+      "company": "companyName",
+      "postedAt": "createdAt",
+      "deadline": "applicationPeriod.end",
+      "careerCode": "careerType",
+      "careerMinYears": "careerRange",
+      "areaCodes": "areaCodeList",
+      "jobTags": "jobClassificationOrIndustry"
+    },
+    "areaCodes": {
+      "queryKey": "CODES",
+      "tablePath": "state.data.area",
+      "codeField": "code",
+      "labelField": "tagDisplayName"
+    },
+    "careerCodes": {
+      "1": "new",
+      "2": "experienced",
+      "3": "newOrExperienced",
+      "4": "any"
+    },
+    "careerMinYearsUnspecified": [
+      0,
+      100
+    ],
+    "jobTagsSeparator": ",",
+    "noDeadlineFromYear": 2070
+  },
+  "postingUrlTemplate": "https://second.test/jobs/{id}"
+}

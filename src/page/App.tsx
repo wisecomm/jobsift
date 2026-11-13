@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { AiInput } from '../ai/settings'
-import type { AiSettingsView, CollectionSummary, PostingKey, PostingPatch, ScoringSummary, SearchCriteria, StoredPosting } from '../shared/types'
+import type { AiSettingsView, CollectionReport, PostingKey, PostingPatch, ScoringSummary, SearchCriteria, StoredPosting } from '../shared/types'
 import { send, updatePosting } from './api'
 import { Header } from './Header'
 import { PostingsView } from './PostingsView'
@@ -16,7 +16,7 @@ export function App() {
   const [postings, setPostings] = useState<StoredPosting[]>([])
   const [ai, setAi] = useState<AiSettingsView | null>(null)
   const [pending, setPending] = useState(0)
-  const [summary, setSummary] = useState<CollectionSummary | null>(null)
+  const [report, setReport] = useState<CollectionReport | null>(null)
   const [scoring, setScoring] = useState<ScoringSummary | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -63,7 +63,7 @@ export function App() {
   const collectNow = () =>
     work(async () => {
       const result = await send({ type: 'collect' })
-      setSummary(result)
+      setReport(result)
       setScoring(result.scoring)
     })
 
@@ -100,7 +100,7 @@ export function App() {
   }
 
   async function devReset() {
-    setSummary(await send({ type: 'devReset' }))
+    setReport(await send({ type: 'devReset' }))
     await refresh()
   }
 
@@ -119,7 +119,7 @@ export function App() {
 
   return (
     <div className="app">
-      <Header busy={busy} canCollect={hasCriteria} summary={summary} scoring={scoring} pending={pending} onCollect={() => void collectNow()} onScorePending={() => void scoreWaiting()} />
+      <Header busy={busy} canCollect={hasCriteria} report={report} scoring={scoring} pending={pending} onCollect={() => void collectNow()} onScorePending={() => void scoreWaiting()} />
       {error && (
         <p role="alert" className="banner warn">
           오류: {error}

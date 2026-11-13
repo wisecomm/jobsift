@@ -27,14 +27,13 @@ const fromPending = ({ queuedAt, matchedKeywords, ...rest }: PendingPosting, now
 })
 
 /**
- * Re-applies the rules and the AI mode to what is stored. Only untouched postings follow: `new` ones without a memo,
+ * Re-applies the rules and the AI mode to what is stored, for every site. Only untouched postings follow: `new` ones without a memo,
  * and everything pending. A posting the user saved, applied to, dismissed, or wrote a memo on keeps its place, since
  * moving it through the queue would lose what they entered. Every move writes the destination before deleting the source,
  * so an interrupted run duplicates at worst and the next save finishes it.
  */
 export async function applyCriteriaChange(
   store: Store,
-  site: string,
   criteria: SearchCriteria,
   { aiOn }: { aiOn: boolean },
   now: Date,
@@ -44,14 +43,14 @@ export async function applyCriteriaChange(
   const result: ChangeResult = { removed: 0, queued: 0 }
   const options = { requireKeywordMatch: !aiOn }
   // Read before moving postings in, so those are not processed twice.
-  const waiting = await store.listPending(site)
+  const waiting = await store.listPending()
 
   const reject = async (posting: StoredPosting | PendingPosting, reason: Extract<ReturnType<typeof evaluate>, { kind: 'reject' }>['reason']) => {
     await store.putDiscard({ site: posting.site, externalId: posting.externalId, reason, discardedAt: nowIso, deadline: posting.deadline })
     result.removed++
   }
 
-  for (const posting of await store.listPostings(site)) {
+  for (const posting of await store.listPostings()) {
     if (posting.status !== 'new') continue
     const outcome = evaluate(posting, criteria, now, options)
     if (outcome.kind === 'reject') {

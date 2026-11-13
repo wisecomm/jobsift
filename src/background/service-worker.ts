@@ -1,4 +1,5 @@
-import { getAdapter } from '../adapter/registry'
+import type { SiteAdapter } from '../adapter/schema'
+import { adapterIds, adapters, getAdapter } from '../adapter/registry'
 import { REQUEST_GAP_MS } from '../ai/constants'
 import { aiErrorMessage, checkKey, scoreBatch } from '../ai/gemini'
 import { createPacer } from '../ai/pacer'
@@ -6,13 +7,14 @@ import { buildInstruction } from '../ai/prompt'
 import { aiEnabled, loadAiSettings, mergeAiInput, normalizeAiSettings, settingsChanged, storeAiSettings, toAiView, type SettingsSnapshot } from '../ai/settings'
 import { applyCriteriaChange } from '../engine/applyCriteriaChange'
 import { normalizeCriteria, parseCriteria } from '../engine/criteria'
-import { runCollection } from '../engine/runCollection'
+import { runAllSites } from '../engine/runAllSites'
 import { scorePending, toScoringSummary, type ScoringDeps } from '../engine/scorePending'
+import { loadSiteRuns, recordSiteRuns } from '../engine/siteRuns'
+import { loadSiteSettings, LAST_SITE_MESSAGE, parseSiteSettings, storeSiteSettings } from '../engine/siteSettings'
 import type { Request, ResponseData, ResponseFor, SettingsResult } from '../shared/messages'
 import type { SearchCriteria } from '../shared/types'
 import { openStore } from '../storage/store'
 
-const adapter = getAdapter('jobkorea')!
 const CRITERIA_KEY = 'criteria'
 const storePromise = openStore()
 
@@ -54,9 +56,18 @@ async function scoringDeps(criteria: SearchCriteria): Promise<ScoringDeps | unde
   }
 }
 
-async function collectNow(): Promise<ResponseData['collect']> {
-  const [store, criteria] = await Promise.all([storePromise, readCriteria()])
-  return runCollection(adapter, criteria, store, { fetchHtml, now: new Date(), scoring: await scoringDeps(criteria) })
+function sitesToRun(site: string | undefined, enabledSites: readonly string[]): SiteAdapter[] {
+  if (site === undefined) return adapters.filter(({ id }) => enabledSites.includes(id))
+  const adapter = getAdapter(site)
+  if (!adapter) throw new Error(`알 수 없는 사이트입니다: ${site}`)
+  return [adapter]
+}
+
+async function collectNow(site?: string): Promise<ResponseData['collect']> {
+  const [store, criteria, { enabledSites }] = await Promise.all([storePromise, readCriteria(), loadSiteSettings(chrome.storage.local, adapterIds)])
+  const report = await runAllSites(sitesToRun(site, enabledSites), criteria, store, { fetchHtml, now: new Date(), scoring: await scoringDeps(criteria) })
+  await recordSiteRuns(chrome.storage.local, report.runs)
+  return report
 }
 
 async function commitSettings(next: SettingsSnapshot): Promise<SettingsResult> {
@@ -64,7 +75,7 @@ async function commitSettings(next: SettingsSnapshot): Promise<SettingsResult> {
   const changed = settingsChanged(prev, next)
   // Cleanup runs before persisting so an interrupted cleanup is redone by the next save, which still sees a change.
   const { removed, queued } = changed
-    ? await applyCriteriaChange(await storePromise, adapter.id, next.criteria, { aiOn: aiEnabled(next.ai) }, new Date())
+    ? await applyCriteriaChange(await storePromise, next.criteria, { aiOn: aiEnabled(next.ai) }, new Date())
     : { removed: 0, queued: 0 }
   await chrome.storage.local.set({ [CRITERIA_KEY]: next.criteria })
   await storeAiSettings(chrome.storage.local, next.ai)
@@ -95,19 +106,28 @@ async function handle(request: Request): Promise<ResponseData[Request['type']]> 
       const result = await checkKey(settings, { fetch: (url, init) => fetch(url, init) })
       return result.kind === 'ok' ? { ok: true } : { ok: false, message: aiErrorMessage(result.error) }
     }
+    case 'getSiteSettings':
+      return { settings: await loadSiteSettings(chrome.storage.local, adapterIds), runs: await loadSiteRuns(chrome.storage.local) }
+    case 'saveSiteSettings': {
+      const known = new Set(adapterIds)
+      if (!request.enabledSites.some((id) => known.has(id))) throw new Error(LAST_SITE_MESSAGE)
+      const settings = parseSiteSettings({ enabledSites: request.enabledSites }, adapterIds)
+      await storeSiteSettings(chrome.storage.local, settings)
+      return settings
+    }
     case 'collect':
-      return exclusive(collectNow)
+      return exclusive(() => collectNow(request.site))
     case 'scorePending':
       return exclusive(async () => {
         const deps = await scoringDeps(await readCriteria())
         const store = await storePromise
-        if (!deps) return { scored: 0, kept: 0, lowScore: 0, pendingLeft: (await store.listPending(adapter.id)).length, error: 'AI 채점이 꺼져 있습니다. 조건 설정에서 API 키를 저장해 주세요.' }
-        return toScoringSummary(await scorePending(store, adapter.id, deps))
+        if (!deps) return { scored: 0, kept: 0, lowScore: 0, pendingLeft: (await store.listPending()).length, error: 'AI 채점이 꺼져 있습니다. 조건 설정에서 API 키를 저장해 주세요.' }
+        return toScoringSummary(await scorePending(store, deps))
       })
     case 'pendingCount':
-      return (await (await storePromise).listPending(adapter.id)).length
+      return (await (await storePromise).listPending()).length
     case 'listPostings':
-      return (await storePromise).listPostings(adapter.id)
+      return (await storePromise).listPostings()
     case 'updatePosting':
       // Not queued behind a collection: the store transaction already makes each update atomic, and the UI must stay responsive.
       return (await storePromise).updatePosting(request.key, request.patch, new Date())

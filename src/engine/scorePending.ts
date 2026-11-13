@@ -22,14 +22,14 @@ export interface ScoringPass {
 }
 
 const queueOrder = (a: PendingPosting, b: PendingPosting) =>
-  a.queuedAt.localeCompare(b.queuedAt) || a.externalId.localeCompare(b.externalId, undefined, { numeric: true })
+  a.queuedAt.localeCompare(b.queuedAt) || a.site.localeCompare(b.site) || a.externalId.localeCompare(b.externalId, undefined, { numeric: true })
 
 /**
- * Drains the pending queue batch by batch. Each batch is committed as it finishes, and the first failed batch
+ * Drains the pending queue of every site batch by batch, so the batch size and request gap hold across sites. Each batch is committed as it finishes, and the first failed batch
  * ends the pass with the rest still queued, so there is no retry loop to burn the user's quota.
  */
-export async function scorePending(store: Store, site: string, { score, pace, minScore, now }: ScoringDeps): Promise<ScoringPass> {
-  const queue = (await store.listPending(site)).sort(queueOrder)
+export async function scorePending(store: Store, { score, pace, minScore, now }: ScoringDeps): Promise<ScoringPass> {
+  const queue = (await store.listPending()).sort(queueOrder)
   const pass: ScoringPass = { scored: 0, kept: 0, lowScore: 0, pendingLeft: queue.length, error: null }
   const nowIso = now.toISOString()
 

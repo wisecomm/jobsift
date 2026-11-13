@@ -29,7 +29,7 @@ describe('applyCriteriaChange', () => {
     await store.putDiscard({ site: 'jobkorea', externalId: 'old', reason: { gate: 'career' }, discardedAt: 'x', deadline: null })
     await store.putCollectState({ site: 'jobkorea', keyword: '전산', lastCollectedAt: 'x' })
 
-    const { removed } = await applyCriteriaChange(store, 'jobkorea', criteria({ locations: ['서울'] }), { aiOn: false }, NOW)
+    const { removed } = await applyCriteriaChange(store, criteria({ locations: ['서울'] }), { aiOn: false }, NOW)
 
     expect(removed).toBe(1)
     const rest = await store.listPostings('jobkorea')
@@ -42,7 +42,7 @@ describe('applyCriteriaChange', () => {
   it('refreshes matched keywords of kept new postings', async () => {
     const store = await freshStore()
     await store.putPosting(stored('1', { title: '전산 회계', matchedKeywords: ['전산'] }))
-    await applyCriteriaChange(store, 'jobkorea', criteria({ keywords: ['회계'] }), { aiOn: false }, NOW)
+    await applyCriteriaChange(store, criteria({ keywords: ['회계'] }), { aiOn: false }, NOW)
     expect((await store.getPosting({ site: 'jobkorea', externalId: '1' }))?.matchedKeywords).toEqual(['회계'])
   })
 })
@@ -63,7 +63,7 @@ describe('applyCriteriaChange with AI on', () => {
     await store.putDiscard({ site: 'jobkorea', externalId: 'low', reason: { gate: 'lowScore', score: 3 }, discardedAt: 'x', deadline: null })
     await store.putCollectState({ site: 'jobkorea', keyword: '전산', lastCollectedAt: 'x' })
 
-    const result = await applyCriteriaChange(store, 'jobkorea', criteria(), { aiOn: true }, NOW)
+    const result = await applyCriteriaChange(store, criteria(), { aiOn: true }, NOW)
 
     expect(result).toEqual({ removed: 0, queued: 1 })
     expect((await store.listPending('jobkorea')).map((p) => [p.externalId, p.queuedAt, p.matchedKeywords])).toEqual([['new', '2026-11-01T00:00:00Z', ['전산']]])
@@ -80,7 +80,7 @@ describe('applyCriteriaChange with AI on', () => {
     await store.putPending(queuedPosting('p-ok', { title: '세무 상담' }))
     await store.putPending(queuedPosting('p-busan', { locations: ['부산>해운대구'] }))
 
-    const result = await applyCriteriaChange(store, 'jobkorea', criteria({ locations: ['서울'] }), { aiOn: true }, NOW)
+    const result = await applyCriteriaChange(store, criteria({ locations: ['서울'] }), { aiOn: true }, NOW)
 
     expect(result).toEqual({ removed: 2, queued: 2 })
     expect((await store.listPending('jobkorea')).map((p) => p.externalId).sort()).toEqual(['off-topic', 'p-ok'])
@@ -95,7 +95,7 @@ describe('applyCriteriaChange with AI turned off', () => {
     await store.putPosting(stored('drop', { title: '보험 설계사', jobTags: [], score: 85, scoreReason: '이유' }))
     await store.putPosting(stored('saved', { status: 'saved', title: '보험 설계사', jobTags: [], score: 85, scoreReason: '이유' }))
 
-    await applyCriteriaChange(store, 'jobkorea', criteria(), { aiOn: false }, NOW)
+    await applyCriteriaChange(store, criteria(), { aiOn: false }, NOW)
 
     const rest = await store.listPostings('jobkorea')
     expect(rest.map((p) => [p.externalId, p.score, p.scoreReason]).sort()).toEqual([['keep', null, null], ['saved', 85, '이유']])
@@ -107,7 +107,7 @@ describe('applyCriteriaChange with AI turned off', () => {
     await store.putPending(queuedPosting('match'))
     await store.putPending(queuedPosting('mismatch', { title: '보험 설계사', jobTags: [] }))
 
-    const result = await applyCriteriaChange(store, 'jobkorea', criteria(), { aiOn: false }, NOW)
+    const result = await applyCriteriaChange(store, criteria(), { aiOn: false }, NOW)
 
     expect(result.removed).toBe(1)
     expect(await store.listPending('jobkorea')).toEqual([])
