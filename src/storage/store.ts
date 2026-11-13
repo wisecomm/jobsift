@@ -10,6 +10,8 @@ export interface Store {
   deletePosting(key: PostingKey): Promise<void>
   /** Read-modify-write in one transaction. An expired posting refuses a status change, so the rule holds for every caller. */
   updatePosting(key: PostingKey, patch: PostingPatch, now: Date): Promise<UpdateResult>
+  /** Marks open postings past their deadline as expired in one transaction, so a status or memo edit made meanwhile is not overwritten. Returns how many changed. */
+  markExpired(site: string, now: Date): Promise<number>
 
   listDiscards(site: string): Promise<DiscardRecord[]>
   putDiscard(record: DiscardRecord): Promise<void>
@@ -72,6 +74,18 @@ export async function openStore(name = DB_NAME): Promise<Store> {
       await tx.store.put(posting)
       await tx.done
       return { kind: 'updated', posting }
+    },
+    async markExpired(site, now) {
+      const tx = db.transaction('postings', 'readwrite')
+      let marked = 0
+      for (const posting of await tx.store.getAll(siteRange(site))) {
+        const open = posting.status === 'new' || posting.status === 'saved'
+        if (!open || posting.deadline === null || Date.parse(posting.deadline) >= now.getTime()) continue
+        await tx.store.put({ ...posting, status: 'expired', updatedAt: now.toISOString() })
+        marked++
+      }
+      await tx.done
+      return marked
     },
 
     listDiscards: (site) => db.getAll('discards', siteRange(site)),

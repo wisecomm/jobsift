@@ -21,17 +21,6 @@ export const emptyGateCounts = (): Record<RejectGate, number> => ({
   career: 0,
 })
 
-async function markExpired(store: Store, site: string, now: Date): Promise<number> {
-  let marked = 0
-  for (const posting of await store.listPostings(site)) {
-    const open = posting.status === 'new' || posting.status === 'saved'
-    if (!open || posting.deadline === null || Date.parse(posting.deadline) >= now.getTime()) continue
-    await store.putPosting({ ...posting, status: 'expired', updatedAt: now.toISOString() })
-    marked++
-  }
-  return marked
-}
-
 async function pruneDiscards(store: Store, site: string, now: Date): Promise<void> {
   const stale = (await store.listDiscards(site)).filter((record) =>
     record.deadline !== null
@@ -49,7 +38,7 @@ export async function runCollection(
 ): Promise<CollectionSummary> {
   const site = adapter.id
   const nowIso = now.toISOString()
-  const expiredMarked = await markExpired(store, site, now)
+  const expiredMarked = await store.markExpired(site, now)
   await pruneDiscards(store, site, now)
 
   const knownIds = await store.knownIds(site)

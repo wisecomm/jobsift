@@ -19,7 +19,7 @@ export function careerLabel(career: Career): string {
     case 'experienced':
       return career.minYears ? `경력 ${career.minYears}년↑` : '경력'
     case 'newOrExperienced':
-      return '신입·경력'
+      return career.minYears ? `신입·경력 ${career.minYears}년↑` : '신입·경력'
     case 'unknown':
       return '경력 정보 없음'
   }
