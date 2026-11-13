@@ -1,10 +1,11 @@
-import type { CollectionSummary, SearchCriteria, StoredPosting } from './types'
+import type { CollectionSummary, PostingKey, PostingPatch, SearchCriteria, StoredPosting, UpdateResult } from './types'
 
 export type Request =
   | { type: 'getCriteria' }
   | { type: 'saveCriteria'; criteria: SearchCriteria }
   | { type: 'collect' }
   | { type: 'listPostings' }
+  | { type: 'updatePosting'; key: PostingKey; patch: PostingPatch }
   | { type: 'devReset' }
 
 export interface ResponseData {
@@ -12,6 +13,7 @@ export interface ResponseData {
   saveCriteria: { changed: boolean; removed: number }
   collect: CollectionSummary
   listPostings: StoredPosting[]
+  updatePosting: UpdateResult
   devReset: CollectionSummary
 }
 

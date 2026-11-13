@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { CollectState, DiscardRecord, PostingKey, StoredPosting } from '../shared/types'
+import type { CollectState, DiscardRecord, PostingKey, PostingPatch, StoredPosting, UpdateResult } from '../shared/types'
 
 export interface Store {
   listPostings(site: string): Promise<StoredPosting[]>
@@ -8,6 +8,8 @@ export interface Store {
   /** Stores the posting only if its key is free, so a re-collect never resets status or memo. Returns whether it was stored. */
   addPosting(posting: StoredPosting): Promise<boolean>
   deletePosting(key: PostingKey): Promise<void>
+  /** Read-modify-write in one transaction. An expired posting refuses a status change, so the rule holds for every caller. */
+  updatePosting(key: PostingKey, patch: PostingPatch, now: Date): Promise<UpdateResult>
 
   listDiscards(site: string): Promise<DiscardRecord[]>
   putDiscard(record: DiscardRecord): Promise<void>
@@ -56,6 +58,21 @@ export async function openStore(name = DB_NAME): Promise<Store> {
       return !exists
     },
     deletePosting: (key) => db.delete('postings', keyOf(key)),
+    async updatePosting(key, patch, now) {
+      const tx = db.transaction('postings', 'readwrite')
+      const current = await tx.store.get(keyOf(key))
+      if (!current) return { kind: 'not-found' }
+      if (patch.status !== undefined && current.status === 'expired') return { kind: 'expired' }
+      const posting: StoredPosting = {
+        ...current,
+        status: patch.status ?? current.status,
+        memo: patch.memo ?? current.memo,
+        updatedAt: now.toISOString(),
+      }
+      await tx.store.put(posting)
+      await tx.done
+      return { kind: 'updated', posting }
+    },
 
     listDiscards: (site) => db.getAll('discards', siteRange(site)),
     // Copy the known fields so a caller passing a whole posting cannot leak its title or url into the record.

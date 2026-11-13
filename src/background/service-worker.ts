@@ -56,6 +56,9 @@ async function handle(request: Request): Promise<ResponseData[Request['type']]> 
       return exclusive(collectNow)
     case 'listPostings':
       return (await storePromise).listPostings(adapter.id)
+    case 'updatePosting':
+      // Not queued behind a collection: the store transaction already makes each update atomic, and the UI must stay responsive.
+      return (await storePromise).updatePosting(request.key, request.patch, new Date())
     case 'devReset':
       if (!import.meta.env.DEV) throw new Error('개발 빌드에서만 사용할 수 있습니다')
       return exclusive(async () => {

@@ -31,6 +31,16 @@ export interface JobPosting {
 
 export type PostingStatus = 'new' | 'saved' | 'applied' | 'dismissed' | 'expired'
 
+/** What a person can set by hand. `expired` is only ever set by the collector. */
+export type UserStatus = Exclude<PostingStatus, 'expired'>
+
+export interface PostingPatch {
+  status?: UserStatus
+  memo?: string
+}
+
+export type UpdateResult = { kind: 'updated'; posting: StoredPosting } | { kind: 'not-found' } | { kind: 'expired' }
+
 export type RejectReason =
   | { gate: 'expired' }
   | { gate: 'excludeKeyword'; keyword: string }
