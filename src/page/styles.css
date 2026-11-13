@@ -1,0 +1,141 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --text: #1c2128;
+  --muted: #5b6673;
+  --border: #d5dae1;
+  --accent: #1f5fd1;
+  --accent-text: #ffffff;
+  --chip: #e6eefc;
+  --chip-text: #1b4a9e;
+  --warn-bg: #fff1e0;
+  --warn-text: #8a3b00;
+  --ok-text: #1d6b3a;
+  --urgent: #c4241a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171c;
+    --surface: #1d2229;
+    --text: #e6e9ee;
+    --muted: #9aa5b3;
+    --border: #343c47;
+    --accent: #6ea3ff;
+    --accent-text: #0e1420;
+    --chip: #263550;
+    --chip-text: #b8d0ff;
+    --warn-bg: #3a2a16;
+    --warn-text: #ffcf9e;
+    --ok-text: #7fd69a;
+    --urgent: #ff8a80;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.55 -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', 'Segoe UI', sans-serif;
+}
+
+.app { max-width: 960px; margin: 0 auto; padding: 20px 20px 48px; }
+[hidden] { display: none !important; }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+button.link { border: 0; background: none; color: var(--accent); padding: 2px 0; }
+
+input, select, textarea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  width: 100%;
+  font-weight: 400;
+}
+
+.app-header { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; align-items: center; margin-bottom: 16px; }
+.app-header h1 { margin: 0; font-size: 22px; }
+.collect-box { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.collect-box .primary { padding: 8px 18px; }
+.hint { color: var(--muted); font-size: 13px; }
+.summary { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
+.summary p { margin: 2px 0; }
+
+.warn { background: var(--warn-bg); color: var(--warn-text); border-radius: 8px; padding: 6px 10px; }
+.ok { color: var(--ok-text); font-weight: 600; }
+.banner { margin: 0 0 12px; }
+
+.main-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.main-tabs button { border: 0; border-bottom: 3px solid transparent; border-radius: 8px 8px 0 0; background: none; padding: 8px 18px; font-weight: 600; color: var(--muted); }
+.main-tabs button[aria-current='page'] { color: var(--text); border-bottom-color: var(--accent); }
+
+.status-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.status-tabs button[aria-pressed='true'] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.count { font-variant-numeric: tabular-nums; opacity: 0.85; margin-left: 2px; }
+
+.filters { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.filters label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); min-width: 120px; }
+.filters .grow { flex: 1 1 200px; }
+
+.cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.card { display: flex; justify-content: space-between; gap: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+.card.status-expired, .card.status-dismissed { opacity: 0.7; }
+.card-main { min-width: 0; flex: 1; }
+.card h3 { margin: 0 0 2px; font-size: 16px; }
+.card h3 a { color: var(--text); text-decoration: none; }
+.card h3 a:hover { color: var(--accent); text-decoration: underline; }
+.company { margin: 0 0 6px; color: var(--muted); }
+.site, .state { margin-left: 8px; font-size: 12px; border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; }
+.state { border-color: var(--accent); color: var(--accent); }
+.facts { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0 0 6px; font-size: 14px; }
+.facts div { display: flex; gap: 6px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; }
+.badge { font-weight: 600; }
+.badge.urgent { color: var(--urgent); }
+.chips { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; padding: 0; }
+.chips li { background: var(--chip); color: var(--chip-text); border-radius: 999px; padding: 0 10px; font-size: 13px; }
+.score { margin: 4px 0; font-size: 14px; }
+.memo { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.memo span { color: var(--muted); font-size: 13px; flex: none; }
+.memo input { padding: 4px 8px; }
+.actions { display: flex; flex-direction: column; gap: 6px; flex: none; align-items: stretch; }
+.actions button { white-space: nowrap; }
+
+.pager { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 20px; align-items: center; }
+.pager button.current { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+
+.empty { text-align: center; color: var(--muted); background: var(--surface); border: 1px dashed var(--border); border-radius: 12px; padding: 36px 16px; }
+.empty p { margin: 0 0 8px; }
+
+.settings { display: flex; flex-direction: column; gap: 16px; max-width: 720px; }
+.settings label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
+.settings small { font-weight: 400; color: var(--muted); }
+.settings .row { display: flex; flex-wrap: wrap; gap: 16px; }
+.settings .row label { flex: 1 1 220px; }
+.samples { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.samples span { color: var(--muted); font-size: 13px; margin-right: 4px; }
+.form-actions { display: flex; gap: 8px; }
+
+@media (max-width: 640px) {
+  .card { flex-direction: column; }
+  .actions { flex-direction: row; flex-wrap: wrap; }
+  .app-header { grid-template-columns: 1fr; }
+  .collect-box { align-items: flex-start; }
+}
