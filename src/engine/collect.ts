@@ -36,23 +36,23 @@ export async function collect(
 
   for (const keyword of criteria.keywords) {
     let reason: StopReason = 'page-cap'
-    pages: for (let n = 0; n < maxPages; n++) {
+    for (let n = 0; n < maxPages; n++) {
       if (requested) await sleep(adapter.search.requestDelayMs)
       requested = true
       const page = adapter.search.firstPage + n
       const html = await fetchHtml(buildSearchUrl(adapter, criteria, keyword, page))
       const { postings, totalPages } = extractPage(adapter, html)
 
+      // The site's order is not guaranteed to be strict, so one stale item must not hide fresh ones after it on the same page.
+      let pageStop: StopReason | null = null
       for (const posting of postings) {
-        if (Date.parse(posting.postedAt) < cutoff) {
-          reason = 'cutoff'
-          break pages
-        }
-        if (knownIds.has(posting.externalId)) {
-          reason = 'known'
-          break pages
-        }
-        if (!byId.has(posting.externalId)) byId.set(posting.externalId, posting)
+        if (Date.parse(posting.postedAt) < cutoff) pageStop ??= 'cutoff'
+        else if (knownIds.has(posting.externalId)) pageStop ??= 'known'
+        else if (!byId.has(posting.externalId)) byId.set(posting.externalId, posting)
+      }
+      if (pageStop) {
+        reason = pageStop
+        break
       }
       if (postings.length === 0 || (totalPages !== null && n + 1 >= totalPages)) {
         reason = 'exhausted'

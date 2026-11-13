@@ -29,7 +29,7 @@ const pageUrl = (keyword: string, page: number) =>
   `https://www.jobkorea.co.kr/Search/?stext=${encodeURIComponent(keyword)}&tabType=recruit&ord=RegDtDesc&Page_No=${page}`
 
 describe('collect', () => {
-  it('stops at the first posting older than the age cutoff and does not fetch further', async () => {
+  it('stops after the page that reaches the age cutoff and does not fetch further', async () => {
     const s = server({
       [pageUrl('전산', 1)]: fakePage([{ id: '1', createdAt: hoursAgo(1) }, { id: '2', createdAt: hoursAgo(5) }], 9),
       [pageUrl('전산', 2)]: fakePage(
@@ -43,7 +43,7 @@ describe('collect', () => {
     expect(result.stopReasons).toEqual({ 전산: 'cutoff' })
   })
 
-  it('stops at a known id and keeps only the newer postings', async () => {
+  it('stops after the page that reaches a known id and skips only the known posting', async () => {
     const s = server({
       [pageUrl('전산', 1)]: fakePage(
         [{ id: '1', createdAt: hoursAgo(1) }, { id: '2', createdAt: hoursAgo(2) }, { id: '3', createdAt: hoursAgo(3) }],
@@ -51,8 +51,20 @@ describe('collect', () => {
       ),
     })
     const result = await collect(adapter, criteria(), { ...s.deps, knownIds: new Set(['2']) })
-    expect(result.postings.map((p) => p.externalId)).toEqual(['1'])
+    expect(result.postings.map((p) => p.externalId)).toEqual(['1', '3'])
     expect(result.stopReasons).toEqual({ 전산: 'known' })
+    expect(s.requested).toHaveLength(1)
+  })
+
+  it('keeps a fresh posting that follows a stale one on the same page', async () => {
+    const s = server({
+      [pageUrl('전산', 1)]: fakePage(
+        [{ id: '1', createdAt: hoursAgo(1) }, { id: '2', createdAt: hoursAgo(90) }, { id: '3', createdAt: hoursAgo(2) }],
+        9,
+      ),
+    })
+    const result = await collect(adapter, criteria({ initialDays: 1 }), s.deps)
+    expect(result.postings.map((p) => p.externalId)).toEqual(['1', '3'])
     expect(s.requested).toHaveLength(1)
   })
 
