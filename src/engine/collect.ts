@@ -9,6 +9,8 @@ export interface CollectDeps {
   knownIds: ReadonlySet<string>
   /** Postings posted before this instant end the keyword's scan. */
   cutoffFor: (keyword: string) => Date
+  /** A keyword that has never completed a run scans down to its cutoff even past known postings, since criteria changes leave known ids scattered through the results. */
+  scanPastKnown?: (keyword: string) => boolean
   sleep?: (ms: number) => Promise<void>
   maxPages?: number
 }
@@ -27,7 +29,7 @@ export async function collect(
   criteria: SearchCriteria,
   deps: CollectDeps,
 ): Promise<CollectResult> {
-  const { fetchHtml, knownIds, cutoffFor, sleep = defaultSleep } = deps
+  const { fetchHtml, knownIds, cutoffFor, scanPastKnown, sleep = defaultSleep } = deps
   const maxPages = deps.maxPages ?? adapter.search.maxPages
   const byId = new Map<string, JobPosting>()
   const stopReasons: Record<string, StopReason> = {}
@@ -50,8 +52,9 @@ export async function collect(
         let pageStop: StopReason | null = null
         for (const posting of postings) {
           if (Date.parse(posting.postedAt) < cutoff) pageStop ??= 'cutoff'
-          else if (knownIds.has(posting.externalId)) pageStop ??= 'known'
-          else found.set(posting.externalId, posting)
+          else if (knownIds.has(posting.externalId)) {
+            if (!scanPastKnown?.(keyword)) pageStop ??= 'known'
+          } else found.set(posting.externalId, posting)
         }
         if (pageStop) {
           reason = pageStop

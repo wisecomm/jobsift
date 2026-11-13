@@ -53,15 +53,18 @@ export async function runCollection(
   const knownIds = await store.knownIds(site)
   const firstRunCutoff = new Date(now.getTime() - criteria.initialDays * DAY_MS)
   const cutoffs = new Map<string, Date>()
+  const neverCollected = new Set<string>()
   for (const keyword of criteria.keywords) {
     const state = await store.getCollectState(site, keyword)
     cutoffs.set(keyword, state ? new Date(state.lastCollectedAt) : firstRunCutoff)
+    if (!state) neverCollected.add(keyword)
   }
 
   const { postings, stopReasons, errors } = await collect(adapter, criteria, {
     fetchHtml,
     knownIds,
     cutoffFor: (keyword) => cutoffs.get(keyword) ?? firstRunCutoff,
+    scanPastKnown: (keyword) => neverCollected.has(keyword),
     sleep,
   })
 

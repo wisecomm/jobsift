@@ -93,6 +93,21 @@ describe('runCollection', () => {
     expect(await store.listDiscards('jobkorea')).toEqual(before.discards.filter((d) => d.externalId !== '4'))
   })
 
+  it('scans past known postings for a keyword with no collect state, as after a criteria change', async () => {
+    const store = await freshStore()
+    await store.putPosting(stored('1'))
+    const s = site({
+      [pageUrl('전산')]: fakePage([{ id: '1', createdAt: hoursAgo(1) }, { id: '2', createdAt: hoursAgo(2) }], 2),
+      [pageUrl('전산', 2)]: fakePage([{ id: '3', createdAt: hoursAgo(3) }], 2),
+    })
+    const summary = await runCollection(adapter, criteria(), store, s.deps(NOW))
+    expect(s.requested).toEqual([pageUrl('전산'), pageUrl('전산', 2)])
+    expect(summary.saved).toBe(2)
+    s.requested.length = 0
+    await runCollection(adapter, criteria(), store, s.deps(new Date(NOW.getTime() + 3600_000)))
+    expect(s.requested).toEqual([pageUrl('전산')])
+  })
+
   it('keeps a user-set status and memo when the posting is collected again', async () => {
     const store = await freshStore()
     await store.putPosting(stored('1', { status: 'applied', memo: '지원 완료' }))
