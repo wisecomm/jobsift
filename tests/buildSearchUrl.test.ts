@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { getAdapter } from '../src/adapter/registry'
 import { buildSearchUrl } from '../src/engine/buildSearchUrl'
 import { adapter, criteria } from './helpers'
 
@@ -15,5 +16,25 @@ describe('buildSearchUrl', () => {
     expect(buildSearchUrl(adapter, criteria({ career: 'new' }), '전산', 1)).toContain('careerType=1,4')
     expect(buildSearchUrl(adapter, criteria({ career: 'experienced' }), '전산', 1)).toContain('careerType=2,4')
     expect(buildSearchUrl(adapter, criteria({ career: 'any' }), '전산', 1)).not.toContain('careerType')
+  })
+
+  it('builds saramin search URLs with dual career parameters', () => {
+    const saramin = getAdapter('saramin')!
+    const urlNew = new URL(buildSearchUrl(saramin, criteria({ career: 'new' }), '전산', 2))
+    expect(urlNew.searchParams.get('searchword')).toBe('전산')
+    expect(urlNew.searchParams.get('recruitPage')).toBe('2')
+    expect(urlNew.searchParams.get('exp_cd')).toBe('1')
+    expect(urlNew.searchParams.get('exp_none')).toBe('y')
+
+    const urlAny = new URL(buildSearchUrl(saramin, criteria({ career: 'any' }), '전산', 1))
+    expect(urlAny.searchParams.has('exp_cd')).toBe(false)
+    expect(urlAny.searchParams.has('exp_none')).toBe(false)
+  })
+
+  it('builds gojobs search URLs with searchKeyword and pageIndex', () => {
+    const gojobs = getAdapter('gojobs')!
+    const url = new URL(buildSearchUrl(gojobs, criteria(), '전산', 3))
+    expect(url.searchParams.get('searchKeyword')).toBe('전산')
+    expect(url.searchParams.get('pageIndex')).toBe('3')
   })
 })

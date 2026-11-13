@@ -6,12 +6,17 @@ const USER_AGENT =
 const LIVE_MAX_PAGES = 2
 
 const keyword = process.argv[2]
+const site = process.argv[3] ?? 'jobkorea'
 if (!keyword) {
-  console.error('사용법: npm run collect:live -- <키워드>')
+  console.error('사용법: npm run collect:live -- <키워드> [사이트]')
   process.exit(1)
 }
 
-const adapter = getAdapter('jobkorea')!
+const adapter = getAdapter(site)
+if (!adapter) {
+  console.error(`알 수 없는 사이트입니다: ${site}`)
+  process.exit(1)
+}
 const result = await collect(
   adapter,
   { keywords: [keyword], excludeKeywords: [], locations: [], career: 'any', initialDays: 7, description: '' },

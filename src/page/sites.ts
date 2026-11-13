@@ -7,10 +7,7 @@ export type SiteInfo =
   | { availability: 'planned'; id: string; name: string; homeUrl: string }
 
 // Planned sites have no adapter yet, so they are display data only and never reach the worker.
-const PLANNED: SiteInfo[] = [
-  { availability: 'planned', id: 'saramin', name: '사람인', homeUrl: 'https://www.saramin.co.kr' },
-  { availability: 'planned', id: 'gojobs', name: '나라일터', homeUrl: 'https://www.gojobs.go.kr' },
-]
+const PLANNED: SiteInfo[] = []
 
 export const SITE_LIST: SiteInfo[] = [
   ...adapters.map(({ id, name, homeUrl, requiresLogin }): SiteInfo => ({ availability: 'available', id, name, homeUrl, requiresLogin })),

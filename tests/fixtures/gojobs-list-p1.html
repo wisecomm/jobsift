@@ -1,0 +1,4124 @@
+
+
+
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>나라일터</title>
+    
+   <script src="/jsp/draft/js/jquery-1.12.4.min.js"></script>
+   <script type="text/javascript" src="/MagicLine4Web/ML4Web/js/ext/jquery-ui.min.js"></script>
+<link type="text/css" rel="stylesheet" href='/css/cmmn.css'/>
+<link type="text/css" href="/jsp/draft/css/admin.css"  media='all' rel='stylesheet' />
+<link type="text/css" href="/jsp/draft/css/button.css" media='all' rel='stylesheet' />
+<link type="text/css" href="/jsp/draft/css/common.css" media='all' rel='stylesheet' />
+<link type="text/css" href="/jsp/draft/css/icon.css"   media='all' rel='stylesheet' />
+<link type="text/css" href="/jsp/draft/css/main.css"   media='all' rel='stylesheet' />
+<link type="text/css" href="/jsp/draft/css/popdesign.css"   media='all' rel='stylesheet' />
+<link type="text/css" href="/jsp/draft/css/reset.css"  media='all' rel='stylesheet' />
+<link type="text/css" href="/jsp/draft/css/style.css"  media='all' rel='stylesheet' />
+<link type="text/css" href="/jsp/draft/css/sitemap.css"  media='all' rel='stylesheet' />
+<link type="text/css" href="/css/media.css"            media='all' rel='stylesheet' />
+<link type="text/css" href="/css/styles.css"            media='all' rel='stylesheet' />
+<link type="text/css" href="/css/nano.css"            media='all' rel='stylesheet' />
+<script type="text/javascript" src="/js/jquery.nanoscroller.min.js"></script>
+<script type="text/javascript">
+/* [웹접근성] 18-2 페이지 제목 세분화
+ * - 화면에서 이미 document.title 을 지정한 경우(기본값 '나라일터'가 아닌 경우)는 그대로 둠
+ * - 그 외에는 "화면제목 [상세보기/작성] < 대메뉴 | 나라일터" 형태로 자동 생성
+ *   예) 모집공고 상세보기 < 공모직위 | 나라일터
+ */
+$(function(){
+    if (document.title != '나라일터') return;
+    var depth1 = $.trim($('#lnb h2.depth1').first().text());
+    var page   = $.trim($('.sub_title h2').first().text()) || $.trim($('#lnb li.current > a').first().text());
+    var path   = location.pathname.toLowerCase();
+    var suffix = '';
+    if (path.indexOf('view') > -1)       suffix = ' 상세보기';
+    else if (path.indexOf('write') > -1) suffix = ' 작성';
+    var parts = [];
+    if (page)  parts.push(page + suffix);
+    if (depth1 && depth1 != page) parts.push(depth1);
+    if (parts.length > 0) document.title = parts.join(' < ') + ' | 나라일터';
+});
+/* [웹접근성] 본문 바로가기 클릭 시 본문 영역으로 초점 이동 */
+$(document).on('click', '#skipToContent', function(e){
+    e.preventDefault();
+    $('#container').focus();
+});
+</script>
+<script src='/jsp/cmmn/js/common.js?v=1794572922403'></script>
+
+<!-- Include js plugin -->
+<script src="/jsp/draft/js/owl.carousel.min.js"></script>
+<link type="text/css" rel="stylesheet" href="/jsp/draft/css/owl_carousel/owl.carousel.min.css" media='all'>
+<link type="text/css" rel="stylesheet" href="/jsp/draft/css/owl_carousel/owl.theme.default.min.css" media='all'>
+    <script>
+    $(function(){
+        var showAc = $(".inner_menu");
+        showAc.hide();
+        $(".s_menubox h3").click(function(){
+
+            if(!$(this).next().is(":visible")){
+                $(this).addClass("on");
+                $(this).next().slideDown(600);
+                $(this).next().css("border-bottom","1px solid #ccc");
+            }else{
+                $(this).next().slideUp();
+                $(this).removeClass("on");  
+            }
+        });
+             
+    })
+        
+    function fn_focus(){
+        var iframe = document.getElementById('main_right').contentWindow.document;
+        if(iframe.getElementById('sub_content') != null) {
+            iframe.getElementById('sub_content').tabIndex = -1;
+            iframe.getElementById('sub_content').focus();
+        }
+     }
+
+    function fn_leftfocus(){
+        var side_menu = window.top.document.getElementById('side_menu');
+        side_menu.tabIndex = -1;
+        side_menu.focus();
+     }
+    
+    $(document).ready(function(){
+        if( navigator.userAgent.match(/Android/i)
+           || navigator.userAgent.match(/webOS/i)
+           || navigator.userAgent.match(/iPhone/i)
+           || navigator.userAgent.match(/iPad/i)
+           || navigator.userAgent.match(/iPod/i)
+           || navigator.userAgent.match(/BlackBerry/i)
+           || navigator.userAgent.match(/Windows Phone/i)
+           ) {
+            $("#nav").hide();
+            $("#leftnav").hide();
+        } else {
+            $("#nav").show();
+            $("#leftnav").show();
+        }
+    });
+    </script>
+</head>
+
+<body onload="fn_onLoad();">
+ <!-- header : S //-->
+ 
+ <div id="skipNavigation">
+        <ul>
+            <li>
+                
+                <a href="#container" id="skipToContent">본문 바로가기</a>
+            </li>
+        </ul>
+    </div>
+        <div id="header">
+            <!-- 상단헤더 : S -->
+                
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+$(function(){
+    var $window = $(window);
+    var $body = $('body');
+    var $menu = $('#M_menu');
+    
+    $menu.wrapInner('<div class="inner"><\/div>');
+    $menu._locked = false;
+    $menu._lock = function() {
+        if ($menu._locked) return false;
+        $menu._locked = true;
+
+        window.setTimeout(function() {
+            $menu._locked = false;
+        }, 350);
+        return true;
+    };
+
+    $menu._show = function() {
+        if ($menu._lock()) $body.addClass('is-menu-visible');
+    };
+
+    $menu._hide = function() {
+        if ($menu._lock()) $body.removeClass('is-menu-visible');
+    };
+
+    $menu._toggle = function() {
+        if ($menu._lock()) $body.toggleClass('is-menu-visible');
+    };
+
+    $menu.appendTo($body).on('click', function(event) { event.stopPropagation(); }).on('click', 'a', function(event) {
+        var href = $(this).attr('href');
+        event.preventDefault();
+        event.stopPropagation();
+        $menu._hide();
+        
+        if (href == '#M_menu') return;
+        window.setTimeout(function() {
+            window.location.href = href;
+        }, 350);
+    }).append('<a class="close" href="#M_menu">Close<\/a>');
+    
+    $body.on('click', 'a[href="#M_menu"]', function(event) {
+            event.stopPropagation();
+            event.preventDefault();
+            $menu._toggle();
+        })
+        .on('click', function(event) {
+            $menu._hide();
+        })
+        .on('keydown', function(event) {
+            if (event.keyCode == 27) $menu._hide();
+        });
+        $(".Mshow_menu").on('click',function(){
+            if(!$('.m_submenu').is(":visible")) {
+                $('.m_submenu').slideDown();
+            }
+    });
+});
+
+$(document).ready(function() { 
+    $('#favorite').on('click', function(e) { 
+        var bookmarkURL = window.location.href; 
+        var bookmarkTitle = document.title; 
+        var triggerDefault = false; 
+        if (window.sidebar && window.sidebar.addPanel) {
+            window.sidebar.addPanel(bookmarkTitle, bookmarkURL, ''); 
+        }else if ((window.sidebar && (navigator.userAgent.toLowerCase().indexOf('firefox') > -1)) || (window.opera && window.print)) {
+            var $this = $(this); $this.attr('href', bookmarkURL); 
+            $this.attr('title', bookmarkTitle); 
+            $this.attr('rel', 'sidebar'); 
+            $this.off(e); triggerDefault = true; 
+        } 
+        else if (window.external && ('AddFavorite' in window.external)) {
+            window.external.AddFavorite(bookmarkURL, bookmarkTitle); 
+        } 
+        else {
+            alert((navigator.userAgent.toLowerCase().indexOf('mac') != -1 ? 'Cmd' : 'Ctrl') + '+D 키를 눌러 즐겨찾기에 등록하실 수 있습니다.'); 
+        } return triggerDefault; 
+    }); 
+});
+
+function getCookie(name) {
+    var cookies = document.cookie.split(";");
+    for (var i = 0; i < cookies.length; i++) {
+        if (cookies[i].indexOf("=") == -1) {
+            if (name == cookies[i])
+                return "";
+        } else {
+            var crumb = cookies[i].split("=");
+            if (name == $.trim(crumb[0]))
+                return unescape($.trim(crumb[1]));
+        }
+    }
+};
+var desktopModeTF = getCookie("DesktopMode");
+var Scale = getCookie("DesktopModeScale");
+var defWidth = 1170;
+if (desktopModeTF == "true") {
+    document
+            .write('<meta name="viewport" content="width='+defWidth+', user-scalable=yes, initial-scale=0.5">'); 
+} else {
+    document
+            .write('<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">');
+}
+
+function desktopMode() {
+    if(getCookie("DesktopMode") == "true"){
+        setModeCookie(false);
+    }else{
+        alert("다시한번 클릭하시면 원래대로 돌아옵니다.");
+        setModeCookie(true);
+        window.scrollTo(0, 0);
+    }
+    location.reload();
+
+}
+
+function fn_desk(){
+    alert("pc버전으로 전환됩니다.");
+    setModeCookie(true);
+    window.scrollTo(0, 0);
+}
+
+function setModeCookie(switchOn){
+    var now = new Date();
+    var time = now.getTime();
+    time += 3600 * 1000;
+    now.setTime(time);
+    document.cookie ='DesktopMode='+switchOn +'; expires=' + now.toUTCString() ;
+    if(switchOn){
+        document.cookie = "DesktopModeScale=" + $('html').width() / defWidth +'; expires=' + now.toUTCString() ;;
+    }
+}    
+</script>
+
+    <!-- 삭제 예정 by 이태호
+    <form name="gateForm">
+        <input name="url"             type="hidden" />
+        <input name="menuNo"          type="hidden" />
+        <input name="mngrMenuYn"      type="hidden" />
+        <input name="message"         type="hidden" value=""/>
+    </form>
+     -->
+        <div class="hinner">
+            <!-- 로고 -->
+            	 <h1>
+                    <a class="logo1 active" href="mainIndex.do" title="나라일터바로가기">인사혁신처 나라일터</a>
+                </h1>
+                 <!-- only mobile view(s) -->
+                <button type="button" id="btnMenu" class="btnmenu" title="메뉴 하위메뉴 펼치기"></button>
+            <!-- 상단 오른쪽 메뉴 : S -->
+                    <ul  class="glb t_none">
+
+                        <li><a href="sysLogin.do" title="로그인">로그인</a></li>
+                        <li><a href="join10_1.do" title="회원가입">회원가입</a></li>
+
+                    </ul>
+             
+            <!-- 상단 오른쪽 메뉴 : E -->
+        </div>
+    
+    
+    <!-- 모바일 헤더 -->
+    <!-- Header -->
+   <!--  <header id="M_header">
+        <div class="inner">
+            Nav
+            <nav>
+                <ul>
+                    <li><a href="#M_menu" title="모바일 메뉴">Menu</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header> -->
+
+
+            
+
+
+
+
+
+
+
+
+ 
+<script>
+/* function activeGNB(id) {
+    var menuSize =  document.getElementById("menuSize").value;
+    if(menuSize > 0) {   
+        for(num=1; num<=menuSize; num++) document.getElementByClassName('gm').style.display='none';
+        document.getElementById(id).style.display='block';
+    }
+} */
+/* function activeGNB(id) {
+    var menuSize =  document.getElementById("menuSize").value;
+    if(menuSize > 0) {   
+        for(num=1; num<=menuSize; num++) document.getElementById('gm'+num).style.display='none';
+        document.getElementById(id).style.display='block';
+    }
+} */
+/* function activeHID() {
+    var menuSize =  document.getElementById("menuSize").value;
+    if(menuSize > 0) {
+        for(num=1; num<=menuSize; num++) document.getElementById('gm'+num).style.display='none';
+    }
+}  */
+$(document).ready(function() {
+
+	$('#navDesktop a').focus(function(){
+		$('#navDesktop').addClass('focusactive');
+	});
+	
+	$('#navDesktop a').blur(function(){
+		$('#navDesktop').removeClass('focusactive');
+	})
+});
+
+
+
+</script>
+     <!-- mobile Navigation Area(s) -->
+            <nav id="navMoblie">
+                <h2 class="blind">인사혁신처 나라일터시스템 주요메뉴</h2>
+                <div class="navwrap nano">
+                    <div class="nano-content">
+                        <div class="minner">
+                        <ul  class="glb">
+
+                        <li><a class="button02 sky" href="sysLogin.do" title="로그인">로그인</a></li>
+                        <li><a class="button02 orange" href="join10_1.do" title="회원가입">회원가입</a></li>
+
+                    </ul>
+                            <ul class="gnbmn">
+                   
+    
+      
+    
+    <li class="m1" style="margin: 0;">  
+        <!-- 대메뉴명 -->
+         
+           <strong><a href="javascript:gfn_menu_move('apmList.do','400','N','400','')">
+                일반채용
+            </a></strong> 
+        
+        
+        <!-- 서브메뉴 S-->
+                    <ul class="depth2">
+                        
+                          
+                            
+                          
+                           
+                           
+                         
+                           
+                            
+                                
+                                
+                                 
+                                        
+                                        <li class="depth3">
+                                        
+                                            <a href="javascript:gfn_menu_move('apmList.do','401','N','400', '')">
+                                                모집공고 
+                                            </a>
+                                            
+                                            
+                                            
+                                        
+                                        </li>
+                                    
+                               
+                                
+                            
+                            
+                                 
+                               
+                          
+                           
+                           
+                         
+                           
+                            
+                                
+                                
+                                 
+                                        
+                                        <li class="depth3">
+                                        
+                                            <a href="javascript:gfn_menu_move('apmListAlways.do','407','N','400', '')">
+                                                상시모집공고 
+                                            </a>
+                                            
+                                            
+                                            
+                                        
+                                        </li>
+                                    
+                               
+                                
+                            
+                            
+                                 
+                               
+                          
+                           
+                           
+                         
+                           
+                            
+                                
+                                
+                                 
+                                        
+                                        <li class="depth3">
+                                        
+                                            <a href="javascript:gfn_menu_move('apmScrap.do','402','N','400', '')">
+                                                나의 관심채용정보 
+                                            </a>
+                                            
+                                            
+                                            
+                                        
+                                        </li>
+                                    
+                               
+                                
+                            
+                            
+                                 
+                               
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                           
+                        
+                <!--서브 메뉴명 E-->
+            </ul>
+        <!-- 서브메뉴 E-->
+    </li>
+    					
+
+    
+    					
+
+    
+    					
+
+    
+    					
+
+    
+      
+    
+    <li class="m5" style="margin: 0;">  
+        <!-- 대메뉴명 -->
+         
+           <strong><a href="javascript:gfn_menu_move('mtchgSmrtList.do?searchHrexchgsecode=1&amp;searchHopeType=1','450','N','450','')">
+                인사교류센터
+            </a></strong> 
+        
+        
+        <!-- 서브메뉴 S-->
+                    <ul class="depth2">
+                        
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                           
+                           
+                         
+                           
+                            
+                                
+                                
+                                 
+                                        
+                                        <li class="depth3">
+                                        
+                                            <a href="javascript:gfn_menu_move('mtchgSmrtList.do?searchHrexchgsecode=1&amp;searchHopeType=1','451','N','450', '')">
+                                                수시인사교류 
+                                            </a>
+                                            
+                                            
+                                            
+                                        
+                                        </li>
+                                    
+                               
+                                
+                            
+                            
+                                 
+                               
+                          
+                           
+                           
+                         
+                           
+                            
+                                
+                                
+                                 
+                                        
+                                        <li class="depth3">
+                                        
+                                            <a href="javascript:gfn_menu_move('mtchgList.do?searchHrexchgsecode=2','462','N','450', '')">
+                                                계획인사교류 
+                                            </a>
+                                            
+                                            
+                                            
+                                        
+                                        </li>
+                                    
+                               
+                                
+                            
+                            
+                                 
+                               
+                          
+                           
+                           
+                         
+                           
+                            
+                                
+                                
+                                 
+                                        
+                                        <li class="depth3">
+                                        
+                                            <a href="javascript:gfn_menu_move('apmList.do?searchEmpmnsecode=e07','457','N','450', '')">
+                                                전입공모 
+                                            </a>
+                                            
+                                            
+                                            
+                                        
+                                        </li>
+                                    
+                               
+                                
+                            
+                            
+                                 
+                               
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                           
+                        
+                            </li>
+                        
+                <!--서브 메뉴명 E-->
+            </ul>
+        <!-- 서브메뉴 E-->
+    </li>
+    					
+
+    
+    					
+
+    
+    					
+
+    
+    					
+
+    
+      
+    
+    <li class="m9" style="margin: 0;">  
+        <!-- 대메뉴명 -->
+         
+           <strong><a href="javascript:gfn_menu_move('smbList.do?searchJobsecode=060','550','N','550','')">
+                대체인력뱅크
+            </a></strong> 
+        
+        
+        <!-- 서브메뉴 S-->
+                    <ul class="depth2">
+                        
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                           
+                           
+                         
+                           
+                            
+                                
+                                
+                                 
+                                        
+                                        <li class="depth3">
+                                        
+                                            <a href="javascript:gfn_menu_move('smbList.do?searchJobsecode=060','551','N','550', '')">
+                                                모집공고 
+                                            </a>
+                                            
+                                            
+                                            
+                                        
+                                        </li>
+                                    
+                               
+                                
+                            
+                            
+                                 
+                               
+                          
+                           
+                           
+                         
+                           
+                            
+                                
+                                
+                                 
+                                        
+                                        <li class="depth3">
+                                        
+                                            <a href="javascript:gfn_menu_move('bbdList.do?searchJobsecode=060&amp;searchBbssecode=70','552','N','550', '')">
+                                                합격자발표 
+                                            </a>
+                                            
+                                            
+                                            
+                                        
+                                        </li>
+                                    
+                               
+                                
+                            
+                            
+                                 
+                               
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                           
+                        
+                            </li>
+                        
+                <!--서브 메뉴명 E-->
+            </ul>
+        <!-- 서브메뉴 E-->
+    </li>
+    					
+
+    
+    					
+
+    
+    					
+
+    
+      
+    
+    <li class="m12" style="margin: 0;">  
+        <!-- 대메뉴명 -->
+         
+           <strong><a href="javascript:gfn_menu_move('apmAllList.do?searchEmpmnsecode=e06','220','N','220','')">
+                공모직위
+            </a></strong> 
+        
+        
+        <!-- 서브메뉴 S-->
+                    <ul class="depth2">
+                        
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                           
+                           
+                         
+                           
+                            
+                                
+                                
+                                 
+                                        
+                                        <li class="depth3">
+                                        
+                                            <a href="javascript:gfn_menu_move('apmAllList.do?searchEmpmnsecode=e06','612','N','220', '')">
+                                                모집공고 
+                                            </a>
+                                            
+                                            
+                                            
+                                        
+                                        </li>
+                                    
+                               
+                                
+                            
+                            
+                                 
+                               
+                          
+                           
+                           
+                         
+                           
+                            
+                                
+                                
+                                 
+                                        
+                                        <li class="depth3">
+                                        
+                                            <a href="javascript:gfn_menu_move('apmAllList.do?searchJobsecode=022&amp;searchEmpmnsecode=e06','615','N','220', '')">
+                                                합격자발표 
+                                            </a>
+                                            
+                                            
+                                            
+                                        
+                                        </li>
+                                    
+                               
+                                
+                            
+                            
+                                 
+                               
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                           
+                        
+                            </li>
+                        
+                <!--서브 메뉴명 E-->
+            </ul>
+        <!-- 서브메뉴 E-->
+    </li>
+    					
+
+    
+    					
+
+    
+    					
+
+    
+      
+    
+    <li class="m15" style="margin: 0;">  
+        <!-- 대메뉴명 -->
+         
+           <strong><a href="javascript:gfn_menu_move('apmList.do?searchJobsecode=050&amp;searchEmpmnsecode=e05','500','N','500','')">
+                개방형직위
+            </a></strong> 
+        
+        
+        <!-- 서브메뉴 S-->
+                    <ul class="depth2">
+                        
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                           
+                           
+                         
+                           
+                            
+                                
+                                
+                                 
+                                        
+                                        <li class="depth3">
+                                        
+                                            <a href="javascript:gfn_menu_move('apmList.do?searchJobsecode=050&amp;searchEmpmnsecode=e05','502','N','500', '')">
+                                                모집공고 
+                                            </a>
+                                            
+                                            
+                                            
+                                        
+                                        </li>
+                                    
+                               
+                                
+                            
+                            
+                                 
+                               
+                          
+                           
+                           
+                         
+                           
+                            
+                                
+                                
+                                 
+                                        
+                                        <li class="depth3">
+                                        
+                                            <a href="javascript:gfn_menu_move('apmList_pass.do?searchJobsecode=050&amp;searchEmpmnsecode=e05','506','N','500', '')">
+                                                합격자발표 
+                                            </a>
+                                            
+                                            
+                                            
+                                        
+                                        </li>
+                                    
+                               
+                                
+                            
+                            
+                                 
+                               
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                           
+                        
+                            </li>
+                        
+                <!--서브 메뉴명 E-->
+            </ul>
+        <!-- 서브메뉴 E-->
+    </li>
+    					
+
+    
+    					
+
+    
+    					
+
+    
+      
+    
+    <li class="m18" style="margin: 0;">  
+        <!-- 대메뉴명 -->
+         
+           <strong><a href="javascript:gfn_menu_move('apmInfo.do','600','N','600','')">
+                알림마당
+            </a></strong> 
+        
+        
+        <!-- 서브메뉴 S-->
+                    <ul class="depth2">
+                        
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                           
+                           
+                         
+                           
+                            
+                                
+                                
+                                 
+                                        
+                                        <li class="depth3">
+                                        
+                                            <a href="javascript:gfn_menu_move('apmInfo.do','601','N','600', '')">
+                                                제도정보 
+                                            </a>
+                                            
+                                            
+                                            <ul>
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                                     
+                                                   
+                                                    <li class="depth4">
+                                                    
+                                                        
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('apmInfo.do','602','N','600','601')" >
+                                                                채용정보 
+                                                            </a>
+                                                        
+                                                        
+                                                    </li>
+                                                     
+                                                      
+                                                   
+                                                     
+                                                                     
+                                                   
+                                                    <li class="depth4">
+                                                    
+                                                        
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('cseInfo.do','603','N','600','601')" >
+                                                                개방형직위 
+                                                            </a>
+                                                        
+                                                        
+                                                    </li>
+                                                     
+                                                      
+                                                   
+                                                     
+                                                                     
+                                                   
+                                                    <li class="depth4">
+                                                    
+                                                        
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('sbstt.do','604','N','600','601')" >
+                                                                대체인력뱅크 
+                                                            </a>
+                                                        
+                                                        
+                                                    </li>
+                                                     
+                                                      
+                                                   
+                                                     
+                                                                     
+                                                   
+                                                    <li class="depth4">
+                                                    
+                                                        
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('insa_susi.do','605','N','600','601')" >
+                                                                수시인사교류 
+                                                            </a>
+                                                        
+                                                        
+                                                    </li>
+                                                     
+                                                      
+                                                   
+                                                     
+                                                                     
+                                                   
+                                                    <li class="depth4">
+                                                    
+                                                        
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('insa_bucheo.do','606','N','600','601')" >
+                                                                계획인사교류 
+                                                            </a>
+                                                        
+                                                        
+                                                    </li>
+                                                     
+                                                      
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                   
+                                                     
+                                                  
+                                            </ul>
+                                            
+                                            
+                                        
+                                        </li>
+                                    
+                               
+                                
+                            
+                            
+                                 
+                               
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                            
+                          
+                           
+                           
+                         
+                           
+                            
+                                
+                                
+                                 
+                                        
+                                        <li class="depth3">
+                                        
+                                            <a href="javascript:gfn_menu_move('bbdList.do?searchJobsecode=070&amp;searchBbssecode=20','607','N','600', '')">
+                                                공지사항 
+                                            </a>
+                                            
+                                            
+                                            
+                                        
+                                        </li>
+                                    
+                               
+                                
+                            
+                            
+                                 
+                               
+                          
+                           
+                           
+                         
+                           
+                            
+                                
+                                
+                                 
+                                        
+                                        <li class="depth3">
+                                        
+                                            <a href="javascript:gfn_menu_move('bbdList.do?searchJobsecode=999&amp;searchBbssecode=30','608','N','600', '')">
+                                                자주찾는질문 
+                                            </a>
+                                            
+                                            
+                                            
+                                        
+                                        </li>
+                                    
+                               
+                                
+                            
+                            
+                                 
+                               
+                          
+                           
+                           
+                         
+                           
+                            
+                                
+                                
+                                 
+                                        
+                                        <li class="depth3">
+                                        
+                                            <a href="javascript:gfn_menu_move('sitemap.do','609','N','600', '')">
+                                                사이트맵 
+                                            </a>
+                                            
+                                            
+                                            
+                                        
+                                        </li>
+                                    
+                               
+                                
+                            
+                            
+                                 
+                               
+                          
+                           
+                           
+                         
+                           
+                            
+                                
+                                
+                                 
+                                        
+                                        <li class="depth3">
+                                        
+                                            <a href="javascript:gfn_menu_move('emplyInfo.do','610','N','600', '')">
+                                                채용안내 
+                                            </a>
+                                            
+                                            
+                                            
+                                        
+                                        </li>
+                                    
+                               
+                                
+                            
+                            
+                                 
+                               
+                           
+                        
+                            </li>
+                        
+                <!--서브 메뉴명 E-->
+            </ul>
+        <!-- 서브메뉴 E-->
+    </li>
+    					
+
+    
+    					
+
+    
+    					
+
+    
+    					
+
+    
+    					
+
+    
+    					
+
+    
+    					
+
+    
+    					
+
+    
+    					
+
+    
+    					
+
+    
+    					
+          
+                    </ul>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+            <div class="navmask" id="btnMenuClose"></div>
+    <!-- 메뉴 START -->
+    <nav id="navDesktop">
+     <h2 class="blind">인사혁신처 나라일터시스템 주요메뉴</h2>
+        <input type="hidden" id="menuSize" value="0"/>
+        <input type="hidden" id="switch" name="switch" value="0"/>
+        <!-- 대메뉴 -->
+        <div class="minner">
+            <ul class="gnbmn_desk">
+                
+                	
+                	  
+                	
+                    <li class="m1" style="margin: 0;" >  
+                        <!-- 대메뉴명 -->
+                         
+                           <strong><a href="javascript:gfn_menu_move('apmList.do','400','N','400','')">
+                                일반채용
+                            </a></strong> 
+                                <script>
+                                $("#gm1").mouseleave(function(){
+                                    activeHID();
+                                });
+                                </script> 
+                        
+                        
+                        <!-- 서브메뉴 S-->
+                                    <ul class="depth2">
+                                        
+                                          
+                                            
+                                          
+                                           
+                                           
+                                         
+                                           
+                                            
+                                                
+                                                
+                                                 
+                                                        
+                                                        <li class="depth3">
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('apmList.do','401','N','400', '')">
+                                                            <span>모집공고</span>
+                                                            </a>
+                                                            
+                                                            
+                                                            
+                                                        
+                                                        </li>
+                                                    
+                                               
+                                                
+                                            
+                                            
+                                                 
+                                               
+                                          
+                                           
+                                           
+                                         
+                                           
+                                            
+                                                
+                                                
+                                                 
+                                                        
+                                                        <li class="depth3">
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('apmListAlways.do','407','N','400', '')">
+                                                            <span>상시모집공고</span>
+                                                            </a>
+                                                            
+                                                            
+                                                            
+                                                        
+                                                        </li>
+                                                    
+                                               
+                                                
+                                            
+                                            
+                                                 
+                                               
+                                          
+                                           
+                                           
+                                         
+                                           
+                                            
+                                                
+                                                
+                                                 
+                                                        
+                                                        <li class="depth3">
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('apmScrap.do','402','N','400', '')">
+                                                            <span>나의 관심채용정보</span>
+                                                            </a>
+                                                            
+                                                            
+                                                            
+                                                        
+                                                        </li>
+                                                    
+                                               
+                                                
+                                            
+                                            
+                                                 
+                                               
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                           
+                                        
+                                <!--서브 메뉴명 E-->
+                            </ul>
+                        <!-- 서브메뉴 E-->
+                    </li>
+                    					
+                
+                	
+                						
+                
+                	
+                						
+                
+                	
+                						
+                
+                	
+                	  
+                	
+                    <li class="m5" style="margin: 0;" >  
+                        <!-- 대메뉴명 -->
+                         
+                           <strong><a href="javascript:gfn_menu_move('mtchgSmrtList.do?searchHrexchgsecode=1&amp;searchHopeType=1','450','N','450','')">
+                                인사교류센터
+                            </a></strong> 
+                                <script>
+                                $("#gm5").mouseleave(function(){
+                                    activeHID();
+                                });
+                                </script> 
+                        
+                        
+                        <!-- 서브메뉴 S-->
+                                    <ul class="depth2">
+                                        
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                           
+                                           
+                                         
+                                           
+                                            
+                                                
+                                                
+                                                 
+                                                        
+                                                        <li class="depth3">
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('mtchgSmrtList.do?searchHrexchgsecode=1&amp;searchHopeType=1','451','N','450', '')">
+                                                            <span>수시인사교류</span>
+                                                            </a>
+                                                            
+                                                            
+                                                            
+                                                        
+                                                        </li>
+                                                    
+                                               
+                                                
+                                            
+                                            
+                                                 
+                                               
+                                          
+                                           
+                                           
+                                         
+                                           
+                                            
+                                                
+                                                
+                                                 
+                                                        
+                                                        <li class="depth3">
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('mtchgList.do?searchHrexchgsecode=2','462','N','450', '')">
+                                                            <span>계획인사교류</span>
+                                                            </a>
+                                                            
+                                                            
+                                                            
+                                                        
+                                                        </li>
+                                                    
+                                               
+                                                
+                                            
+                                            
+                                                 
+                                               
+                                          
+                                           
+                                           
+                                         
+                                           
+                                            
+                                                
+                                                
+                                                 
+                                                        
+                                                        <li class="depth3">
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('apmList.do?searchEmpmnsecode=e07','457','N','450', '')">
+                                                            <span>전입공모</span>
+                                                            </a>
+                                                            
+                                                            
+                                                            
+                                                        
+                                                        </li>
+                                                    
+                                               
+                                                
+                                            
+                                            
+                                                 
+                                               
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                           
+                                        
+                                            </li>
+                                        
+                                <!--서브 메뉴명 E-->
+                            </ul>
+                        <!-- 서브메뉴 E-->
+                    </li>
+                    					
+                
+                	
+                						
+                
+                	
+                						
+                
+                	
+                						
+                
+                	
+                	  
+                	
+                    <li class="m9" style="margin: 0;" >  
+                        <!-- 대메뉴명 -->
+                         
+                           <strong><a href="javascript:gfn_menu_move('smbList.do?searchJobsecode=060','550','N','550','')">
+                                대체인력뱅크
+                            </a></strong> 
+                                <script>
+                                $("#gm9").mouseleave(function(){
+                                    activeHID();
+                                });
+                                </script> 
+                        
+                        
+                        <!-- 서브메뉴 S-->
+                                    <ul class="depth2">
+                                        
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                           
+                                           
+                                         
+                                           
+                                            
+                                                
+                                                
+                                                 
+                                                        
+                                                        <li class="depth3">
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('smbList.do?searchJobsecode=060','551','N','550', '')">
+                                                            <span>모집공고</span>
+                                                            </a>
+                                                            
+                                                            
+                                                            
+                                                        
+                                                        </li>
+                                                    
+                                               
+                                                
+                                            
+                                            
+                                                 
+                                               
+                                          
+                                           
+                                           
+                                         
+                                           
+                                            
+                                                
+                                                
+                                                 
+                                                        
+                                                        <li class="depth3">
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('bbdList.do?searchJobsecode=060&amp;searchBbssecode=70','552','N','550', '')">
+                                                            <span>합격자발표</span>
+                                                            </a>
+                                                            
+                                                            
+                                                            
+                                                        
+                                                        </li>
+                                                    
+                                               
+                                                
+                                            
+                                            
+                                                 
+                                               
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                           
+                                        
+                                            </li>
+                                        
+                                <!--서브 메뉴명 E-->
+                            </ul>
+                        <!-- 서브메뉴 E-->
+                    </li>
+                    					
+                
+                	
+                						
+                
+                	
+                						
+                
+                	
+                	  
+                	
+                    <li class="m12" style="margin: 0;" >  
+                        <!-- 대메뉴명 -->
+                         
+                           <strong><a href="javascript:gfn_menu_move('apmAllList.do?searchEmpmnsecode=e06','220','N','220','')">
+                                공모직위
+                            </a></strong> 
+                                <script>
+                                $("#gm12").mouseleave(function(){
+                                    activeHID();
+                                });
+                                </script> 
+                        
+                        
+                        <!-- 서브메뉴 S-->
+                                    <ul class="depth2">
+                                        
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                           
+                                           
+                                         
+                                           
+                                            
+                                                
+                                                
+                                                 
+                                                        
+                                                        <li class="depth3">
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('apmAllList.do?searchEmpmnsecode=e06','612','N','220', '')">
+                                                            <span>모집공고</span>
+                                                            </a>
+                                                            
+                                                            
+                                                            
+                                                        
+                                                        </li>
+                                                    
+                                               
+                                                
+                                            
+                                            
+                                                 
+                                               
+                                          
+                                           
+                                           
+                                         
+                                           
+                                            
+                                                
+                                                
+                                                 
+                                                        
+                                                        <li class="depth3">
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('apmAllList.do?searchJobsecode=022&amp;searchEmpmnsecode=e06','615','N','220', '')">
+                                                            <span>합격자발표</span>
+                                                            </a>
+                                                            
+                                                            
+                                                            
+                                                        
+                                                        </li>
+                                                    
+                                               
+                                                
+                                            
+                                            
+                                                 
+                                               
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                           
+                                        
+                                            </li>
+                                        
+                                <!--서브 메뉴명 E-->
+                            </ul>
+                        <!-- 서브메뉴 E-->
+                    </li>
+                    					
+                
+                	
+                						
+                
+                	
+                						
+                
+                	
+                	  
+                	
+                    <li class="m15" style="margin: 0;" >  
+                        <!-- 대메뉴명 -->
+                         
+                           <strong><a href="javascript:gfn_menu_move('apmList.do?searchJobsecode=050&amp;searchEmpmnsecode=e05','500','N','500','')">
+                                개방형직위
+                            </a></strong> 
+                                <script>
+                                $("#gm15").mouseleave(function(){
+                                    activeHID();
+                                });
+                                </script> 
+                        
+                        
+                        <!-- 서브메뉴 S-->
+                                    <ul class="depth2">
+                                        
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                           
+                                           
+                                         
+                                           
+                                            
+                                                
+                                                
+                                                 
+                                                        
+                                                        <li class="depth3">
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('apmList.do?searchJobsecode=050&amp;searchEmpmnsecode=e05','502','N','500', '')">
+                                                            <span>모집공고</span>
+                                                            </a>
+                                                            
+                                                            
+                                                            
+                                                        
+                                                        </li>
+                                                    
+                                               
+                                                
+                                            
+                                            
+                                                 
+                                               
+                                          
+                                           
+                                           
+                                         
+                                           
+                                            
+                                                
+                                                
+                                                 
+                                                        
+                                                        <li class="depth3">
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('apmList_pass.do?searchJobsecode=050&amp;searchEmpmnsecode=e05','506','N','500', '')">
+                                                            <span>합격자발표</span>
+                                                            </a>
+                                                            
+                                                            
+                                                            
+                                                        
+                                                        </li>
+                                                    
+                                               
+                                                
+                                            
+                                            
+                                                 
+                                               
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                           
+                                        
+                                            </li>
+                                        
+                                <!--서브 메뉴명 E-->
+                            </ul>
+                        <!-- 서브메뉴 E-->
+                    </li>
+                    					
+                
+                	
+                						
+                
+                	
+                						
+                
+                	
+                	  
+                	
+                    <li class="m18" style="margin: 0;" >  
+                        <!-- 대메뉴명 -->
+                         
+                           <strong><a href="javascript:gfn_menu_move('apmInfo.do','600','N','600','')">
+                                알림마당
+                            </a></strong> 
+                                <script>
+                                $("#gm18").mouseleave(function(){
+                                    activeHID();
+                                });
+                                </script> 
+                        
+                        
+                        <!-- 서브메뉴 S-->
+                                    <ul class="depth2">
+                                        
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                           
+                                           
+                                         
+                                           
+                                            
+                                                
+                                                
+                                                 
+                                                        
+                                                        <li class="depth3">
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('apmInfo.do','601','N','600', '')">
+                                                            <span>제도정보</span>
+                                                            </a>
+                                                            
+                                                            
+                                                            <ul>
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		                     
+                                                        		   
+                                                        			<li class="depth4">
+                                                            		
+                                                                		
+                                                                		
+                                                                    		<a  href="javascript:gfn_menu_move('apmInfo.do','602','N','600','601')" >
+                                                                        		채용정보 
+                                                                    		</a>
+                                                                		
+                                                            			
+                                                        			</li>
+                                                        			 
+                                                        		      
+                                                        		   
+                                                        		     
+                                                        		                     
+                                                        		   
+                                                        			<li class="depth4">
+                                                            		
+                                                                		
+                                                                		
+                                                                    		<a  href="javascript:gfn_menu_move('cseInfo.do','603','N','600','601')" >
+                                                                        		개방형직위 
+                                                                    		</a>
+                                                                		
+                                                            			
+                                                        			</li>
+                                                        			 
+                                                        		      
+                                                        		   
+                                                        		     
+                                                        		                     
+                                                        		   
+                                                        			<li class="depth4">
+                                                            		
+                                                                		
+                                                                		
+                                                                    		<a  href="javascript:gfn_menu_move('sbstt.do','604','N','600','601')" >
+                                                                        		대체인력뱅크 
+                                                                    		</a>
+                                                                		
+                                                            			
+                                                        			</li>
+                                                        			 
+                                                        		      
+                                                        		   
+                                                        		     
+                                                        		                     
+                                                        		   
+                                                        			<li class="depth4">
+                                                            		
+                                                                		
+                                                                		
+                                                                    		<a  href="javascript:gfn_menu_move('insa_susi.do','605','N','600','601')" >
+                                                                        		수시인사교류 
+                                                                    		</a>
+                                                                		
+                                                            			
+                                                        			</li>
+                                                        			 
+                                                        		      
+                                                        		   
+                                                        		     
+                                                        		                     
+                                                        		   
+                                                        			<li class="depth4">
+                                                            		
+                                                                		
+                                                                		
+                                                                    		<a  href="javascript:gfn_menu_move('insa_bucheo.do','606','N','600','601')" >
+                                                                        		계획인사교류 
+                                                                    		</a>
+                                                                		
+                                                            			
+                                                        			</li>
+                                                        			 
+                                                        		      
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		   
+                                                        		     
+                                                        		  
+                                                            </ul>
+                                                            
+                                                            
+                                                        
+                                                        </li>
+                                                    
+                                               
+                                                
+                                            
+                                            
+                                                 
+                                               
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                            
+                                          
+                                           
+                                           
+                                         
+                                           
+                                            
+                                                
+                                                
+                                                 
+                                                        
+                                                        <li class="depth3">
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('bbdList.do?searchJobsecode=070&amp;searchBbssecode=20','607','N','600', '')">
+                                                            <span>공지사항</span>
+                                                            </a>
+                                                            
+                                                            
+                                                            
+                                                        
+                                                        </li>
+                                                    
+                                               
+                                                
+                                            
+                                            
+                                                 
+                                               
+                                          
+                                           
+                                           
+                                         
+                                           
+                                            
+                                                
+                                                
+                                                 
+                                                        
+                                                        <li class="depth3">
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('bbdList.do?searchJobsecode=999&amp;searchBbssecode=30','608','N','600', '')">
+                                                            <span>자주찾는질문</span>
+                                                            </a>
+                                                            
+                                                            
+                                                            
+                                                        
+                                                        </li>
+                                                    
+                                               
+                                                
+                                            
+                                            
+                                                 
+                                               
+                                          
+                                           
+                                           
+                                         
+                                           
+                                            
+                                                
+                                                
+                                                 
+                                                        
+                                                        <li class="depth3">
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('sitemap.do','609','N','600', '')">
+                                                            <span>사이트맵</span>
+                                                            </a>
+                                                            
+                                                            
+                                                            
+                                                        
+                                                        </li>
+                                                    
+                                               
+                                                
+                                            
+                                            
+                                                 
+                                               
+                                          
+                                           
+                                           
+                                         
+                                           
+                                            
+                                                
+                                                
+                                                 
+                                                        
+                                                        <li class="depth3">
+                                                        
+                                                            <a  href="javascript:gfn_menu_move('emplyInfo.do','610','N','600', '')">
+                                                            <span>채용안내</span>
+                                                            </a>
+                                                            
+                                                            
+                                                            
+                                                        
+                                                        </li>
+                                                    
+                                               
+                                                
+                                            
+                                            
+                                                 
+                                               
+                                           
+                                        
+                                            </li>
+                                        
+                                <!--서브 메뉴명 E-->
+                            </ul>
+                        <!-- 서브메뉴 E-->
+                    </li>
+                    					
+                
+                	
+                						
+                
+                	
+                						
+                
+                	
+                						
+                
+                	
+                						
+                
+                	
+                						
+                
+                	
+                						
+                
+                	
+                						
+                
+                	
+                						
+                
+                	
+                						
+                
+                	
+                						
+                          
+            </ul>
+        </div>
+    </nav>
+    <!-- 메뉴 END -->
+            <!-- 상단헤더 : S -->
+        </div>
+        <!-- header : E //-->
+    <div id="wrap">
+        <!--HEADER : S-->
+    
+        <!--HEADER : E-->
+        
+        
+        
+        <!--CONTAINER : S-->
+        <div id="container" class="inner" tabindex="-1">
+            <!--사이드메뉴-->
+             
+				<nav id="lnb">
+            	
+
+
+    <nav class="left side_menu" id="side_menu lnb">
+        
+           
+        
+        
+              
+        
+        <h2 class="depth1" style="font-size:1.4rem">일반채용</h2>
+        <ul class="lnbwrap">
+                
+                
+                  
+                
+                	  
+                	
+                	  
+                
+                	    
+                	   
+                	
+                	
+                
+                	<li class="sbmn current">
+                		<strong>
+	              			
+		              			
+		              			
+		              				<a  href="javascript:gfn_menu_move('apmList.do','401','N','400', '')">
+	                    				모집공고
+	                    			</a>
+		              			
+                			
+	                		
+                    	</strong>
+                    	
+                    	
+                    	
+                          	
+                    </li>
+                    
+                       
+                	  
+                	
+                	  
+                
+                	    
+                	   
+                	
+                	
+                
+                	<li class="sbmn ">
+                		<strong>
+	              			
+		              			
+		              			
+		              				<a  href="javascript:gfn_menu_move('apmListAlways.do','407','N','400', '')">
+	                    				상시모집공고
+	                    			</a>
+		              			
+                			
+	                		
+                    	</strong>
+                    	
+                    	
+                    	
+                          	
+                    </li>
+                    
+                       
+                	  
+                	
+                	  
+                
+                	    
+                	   
+                	
+                	
+                
+                	<li class="sbmn ">
+                		<strong>
+	              			
+		              			
+		              			
+		              				<a  href="javascript:gfn_menu_move('apmScrap.do','402','N','400', '')">
+	                    				나의 관심채용정보
+	                    			</a>
+		              			
+                			
+	                		
+                    	</strong>
+                    	
+                    	
+                    	
+                          	
+                    </li>
+                    
+                       
+                	  
+                	
+                	  
+                
+        </ul>
+          
+           
+        
+        
+          
+           
+        
+        
+          
+           
+        
+        
+          
+           
+    </nav>
+
+<script>
+</script>
+
+
+            	</nav>
+            <!--본문메뉴-->
+            <div id="contents">
+            
+                <!--본문내용 : S-->
+                
+
+
+
+
+
+
+
+
+
+
+<!-- <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ko" xml:lang="ko">
+
+HEAD START
+<head>
+    <title>채용정보 | 나라일터</title> -->
+    <script>
+    $(document).ready(function() {
+        var selectTarget = $('.select select'); 
+        
+        selectTarget.on('focus',function(){ 
+            $(this).parent().addClass('focus'); 
+        }); 
+        selectTarget.on('blur', function(){ 
+            $(this).parent().removeClass('focus'); 
+        }); 
+        selectTarget.change(function(){
+            var select_name = $(this).children('option:selected').text(); 
+            $(this).siblings('label').text(select_name); 
+            $(this).parent().removeClass('focus'); 
+        }); 
+
+        $(function(){
+            var menuNo 		= $("#menuNo").val();
+            var selMenuNo	= $("#selMenuNo").val();
+            var upperMenuNo = $("#upperMenuNo").val();
+            $("#tabBtn").click(function(){ //tabBtn를 클릭하면
+                $("#tabBtn").addClass('tabBtn_on'); //tabBtn2의 .tabBtn_on추가
+                $("#tabBtn > a").addClass('color_fff'); //tabBtn2의 .color_fff를 추가
+                $("#tabBtn2").removeClass('tabBtn_on'); //tabBtn2의 .tabBtn_on를 없애라
+                $("#tabBtn2 > a").removeClass('color_fff'); //tabBtn2의 color_fff를 없애라
+                
+                var url = "apmList.do?searchEmpmnsecode=e05&searchJobsecode=050";
+                	url += "&menuNo="+menuNo + "&selMenuNo="+selMenuNo + "&upperMenuNo="+upperMenuNo;
+                location.href = url;
+            });
+            $("#tabBtn2").click(function(){ //tabBtn2를 클릭하면
+                $("#tabBtn").removeClass('tabBtn_on'); //tabBtn2의 .tabBtn_on를 없애라
+                $("#tabBtn > a").removeClass('color_fff'); //tabBtn2의 color_fff를 없애라
+                $("#tabBtn2").addClass('tabBtn_on'); //tabBtn2의 .tabBtn_on추가
+                $("#tabBtn2 > a").addClass('color_fff'); //tabBtn2의 .color_fff를 추가
+               
+                var url = "bbdList.do?searchJobsecode=050&searchBbssecode=70";
+            		url += "&menuNo="+menuNo + "&selMenuNo="+selMenuNo + "&upperMenuNo="+upperMenuNo;
+                location.href = url;
+            });
+            $("#tabBtn3").click(function(){ //tabBtn3를 클릭하면
+                /*  $("#tabBtn").removeClass('tabBtn_on'); //tabBtn2의 .tabBtn_on를 없애라
+                 $("#tabBtn > a").removeClass('color_fff'); //tabBtn2의 color_fff를 없애라
+                 $("#tabBtn2").addClass('tabBtn_on'); //tabBtn2의 .tabBtn_on추가
+                 $("#tabBtn2 > a").addClass('color_fff'); //tabBtn2의 .color_fff를 추가 */
+
+                 var url = "apmList_pass.do?searchJobsecode=050&searchEmpmnsecode=e05&menuNo=502&mngrMenuYn=N&selMenuNo=500&upperMenuNo=&wd=1920";
+         	/* 	url += "&menuNo="+menuNo + "&selMenuNo="+selMenuNo + "&upperMenuNo="+upperMenuNo; */
+             	location.href = url;
+             });
+        });
+		
+    });
+    </script>
+<!-- HEAD END -->
+
+<!-- BODY START -->
+    <form name="gateForm">
+        <input name="url"        type="hidden" />
+        <input name="mngrMenuYn" type="hidden" />
+        <input name="authBtn"    type="hidden" value="YNNN"/>
+        <input name="message"    type="hidden" value=""/>
+    </form>
+    <div class="sub_content" id="sub_content">
+    <style>
+        .tabMenu > ul > li {float:left;box-sizing: border-box;}
+        .tabMenu > ul > li.tabBtn {padding:12px 15px;width:33.333%; border: 1px solid rgb(221, 221, 221);float:left;text-align: center;background-color:#fff;height: 50px;}
+        .tabMenu > ul > li.tabBtn_on {border-bottom: 3px solid #078de2;}
+        .tabMenu > ul > li.tabBtn_on a{color:  #078de2;font-weight:bold;}
+        .plusBtn{padding: 0 25px 0 0;background: url(../../images/common/arrow01.png) 90% 50% no-repeat;border: 1px solid #bbb;} 
+        .minusBtn{padding: 0 25px 0 0;background: url(../../images/common/arrow02.png) 90% 50% no-repeat;border: 1px solid #bbb;} 
+        @media screen and (max-width: 767px) {
+            .mobile_on{display: table-row !important;}
+            .mobile_on #searchWorkareacode{width: calc(100% - 90px);}
+        }
+        
+        /* banner */
+        .notice-banner {
+			width: 100%;
+			position: relative;
+			background: linear-gradient(-60deg, #ebf2f7, #d2e7f7);
+			padding: 8% 24px 8% 40%;
+			border-radius: 16px;
+		}
+		.notice-banner::before {
+			content: "";
+			position: absolute;
+			left: 12px;
+			top: 24px;
+			display: inline-block;
+			width: 145px;
+			height: 40px;
+			background: url(../../images/apm/logo.png) no-repeat center center / cover ;
+			
+		}
+		.notice-banner::after {
+			content: "";
+			position: absolute;
+			left: 3%;
+			bottom: 0;
+			display: inline-block;
+			width: 35%;
+			height: 300px;
+			background:url(../../images/apm/notice.png) no-repeat center bottom / contain;
+		}
+		.notice-banner .notice-text {
+			font-size: 28px;
+			margin-bottom: 80px;
+		}
+		.notice-banner .notice-text .bg-text{
+			background-color: #111;
+			color: #fff;
+			padding: 0 8px;
+			font-weight: 600;
+		}
+		.notice-banner .notice-link{
+			position: relative;
+			display: inline-block;
+			font-size: 20px;
+			text-decoration: none;
+			color: #111;
+			padding: 0 4px;
+			border-bottom: 2px solid transparent;
+		}
+		.notice-banner .notice-link::before {
+			content: "";
+			position: absolute;
+			left: 0;
+			bottom: -2px;
+			width: 100%;
+			height: 2px;
+			background: #111;
+			
+			transform: scaleX(0);
+			transform-origin: left;
+			transition: transform .2s linear;
+		}
+		.notice-banner .notice-link:hover::before {
+			transform: scaleX(1);
+		}
+		.notice-banner .notice-link::after {
+			content: "";
+			display: inline-block;
+			width: 8px;
+			height: 8px;
+			border-right: 2px solid #111;
+			border-top: 2px solid #111;
+			transform: rotate(45deg);
+			margin-left: 8px;
+			margin-bottom: 2px;
+		}
+		.btn_blue {
+			background-color: #0E97EC;
+    		padding: 6px 16px;
+    		border-radius: 6px;
+		}
+		.btn_blue:hover {
+			background-color: #2e719b;
+			color: #fff;
+			transition: all .3s ease;
+		}
+		@media (max-width: 756px) {
+			.notice-banner {
+				position:retlative;
+				padding: 17% 5%;		
+			}
+			.notice-banner::after {
+				width: 35%;			
+			}
+			.notice-banner .notice-link {
+				font-size: 16px;
+				position: absolute;
+				right: 5%;
+				bottom: 5%;
+				z-index: 100;
+			}
+		}
+    </style>
+        <div id="infoImg" class="inner"">
+        	<!-- banner S -->
+        	<div id="noticeBanner" class="notice-banner" style="display:none;">
+				<div class="notice-text">
+					개방형직위 모집공고는</br>
+					<span class="bg-text">국가공무원 채용시스템</span>
+					에서 확인 가능합니다.
+				</div>
+				<!-- href링크 필수 추가 -->
+				<a id="gongmuwonBtn" class="notice-link" href="javascript:void(0);">국가공무원 채용시스템 바로가기</a>
+			</div>
+			<div id="mrtpBtn" class="mrtp center" style="display:none;">
+				<!-- href링크 필수 추가 -->
+	           	<a id="infoLink" class="btn_blue" href="javascript:void(0);">기존 모집공고 바로가기</a>		
+			</div>
+			<!-- banner E -->
+
+            <!--타이틀 S-->
+			<div class="sub_title clear_after">
+				
+	               
+					
+						
+							
+								<h2>모집공고</h2>
+								<p class="right">
+									<img src="/jsp/draft/image/sub/icon_home.png" alt="home" />
+									&nbsp;&nbsp;&gt;&nbsp;&nbsp;일반채용 
+                	            	&nbsp;&nbsp;&gt;&nbsp;&nbsp;모집공고 
+								</p>
+								<script>window.top.document.title = '모집공고 < 일반채용 | 나라일터';</script>
+							
+							
+						
+					
+	            
+			</div>
+			<!--타이틀 E-->
+        
+            <form id="listForm" name="listForm" action="/apmList.do;jsessionid=i69PCN3osLYjJm5paMehyPEw.gojobs22?menuNo=401&amp;mngrMenuYn=N&amp;selMenuNo=400&amp;upperMenuNo=" method="post">
+            <input type="hidden" name="flag"/>
+            <input type="hidden" name="searchDetail"       value=""/>
+            <input type="hidden" name="searchJobsecode"    value="020"/>
+            <input type="hidden" name="searchEmpmnsecode"  id="searchEmpmnsecode" value=""/>
+            <input type="hidden" name="recentEmploy"       id="recentEmploy" />
+            <input type="hidden" name="empmnsn"            value="0"/>
+            <input type="hidden" name="employStep"         value=""/>
+            <input type="hidden" name="prgl"               value="apmList"/>
+            <input type="hidden" name="searchWorkareaname" id="searchWorkareaname" 	value=""/>
+            <input type="hidden" name="areanm" 			   value=""/>
+            <input type="hidden" name="menuNo"             id="menuNo"	  	value="401"/>
+            <input type="hidden" name="selMenuNo"          id="selMenuNo" 	value="400"/>
+            <input type="hidden" name="upperMenuNo"        id="upperMenuNo" value=""/>
+            <input type="hidden" name="wd" id="wd" />
+            <input type="hidden" id="isShowBtn"			   name="isShowBtn" value="N"/>  
+            <input type="hidden" id="listViewYn"		name="listViewYn" value="N"/>  
+         
+            
+            
+           	
+            <!--검색조건 S-->            
+            <div class="bg_fff clear_after mrtp">
+                <!-- 검색탭(선발공고 / 합격자발표) -->
+                
+                    
+                
+                <fieldset>
+                    <legend>기간검색</legend>
+                    <table id="searchTbl" class="bdtable1">
+                        <caption>
+                            
+                             
+                             일반채용 모집공고
+                             
+                             
+                             	검색 - 기관명, 공고명,기관유형,채용유형,공모직위/개방형직위 ,채용지역,장애인채용우대 공고마감일으로 구성</caption>
+                        <colgroup>
+                                <col width="15%" />
+                                <col width="35%" />
+                                <col width="15%" />
+                                <col width="35%" />
+                            </colgroup>
+                        <tr>
+                            <th style="width:145px;"><label for="searchSelectninsttnm">기&nbsp;&nbsp;관&nbsp;&nbsp;명</label></th>
+                            <td colspan="3"><input class="input01" type="text" id="searchSelectninsttnm" name="searchSelectninsttnm" maxlength="66" style="max-width:320px;" onkeydown="if(event.keyCode == 13) {fn_apmList(); return false;}" value=""/></td>
+                         </tr>
+                         <tr>   
+                            <th><label for="searchKeyword">공&nbsp;&nbsp;고&nbsp;&nbsp;명</label></th>
+                            <td colspan="3"><input class="input01" type="text" id="searchKeyword" name="searchKeyword" maxlength="166" style="max-width:320px;" onkeydown="if(event.keyCode == 13) {fn_apmList(); return false;}" value=""/></td>
+                        </tr>
+                        <tr style="display:none;">
+                        	<th style="width:145px;"><label for="">공고내용</label></th>
+                            <td colspan="3">
+                            	<input type="text" id="detailKeyword" class="input01" name="detailKeyword" maxlength="66" style="max-width:240px;" onkeydown="if(event.keyCode == 13) {fn_apmList(); return false;}" value=""/>&nbsp;&nbsp;&nbsp;&nbsp;
+                            </td>
+                        </tr>
+                        
+                        <tr>
+                        	<th><label for="">기관유형</label></th>
+                            <td class="r_date02" colspan="3" >
+                            	<input type="radio" id="searchInsttsecode0" name="searchInsttsecode" value="" checked/><label for="searchInsttsecode0">&nbsp;전체</label>&nbsp;&nbsp;
+								
+									<input type="radio" id="searchInsttsecode1" name="searchInsttsecode" value="g01" /><label for="searchInsttsecode1">&nbsp;국가기관</label>&nbsp;&nbsp;
+								
+									<input type="radio" id="searchInsttsecode2" name="searchInsttsecode" value="g02" /><label for="searchInsttsecode2">&nbsp;지자체</label>&nbsp;&nbsp;
+								
+									<input type="radio" id="searchInsttsecode3" name="searchInsttsecode" value="g04" /><label for="searchInsttsecode3">&nbsp;교육청</label>&nbsp;&nbsp;
+								
+									<input type="radio" id="searchInsttsecode4" name="searchInsttsecode" value="g03" /><label for="searchInsttsecode4">&nbsp;공공기관</label>&nbsp;&nbsp;
+								
+                            </td>
+                        </tr>
+                        
+                        
+                        <tr class="m_none">
+                        	<th><label for="">채용유형</label></th>
+                        	<td colspan="4">
+                        	<ul class="clearfix">
+                        		
+                        			<li class="left mrt">
+                        			<input type="checkbox" id="searchListEmpmnsecode1" name="searchListEmpmnsecode" class="chkBox" value="e01"/>
+                        			<label for="searchListEmpmnsecode1">공무원 채용</label>
+                        			</li>
+                        		
+                        			<li class="left mrt">
+                        			<input type="checkbox" id="searchListEmpmnsecode2" name="searchListEmpmnsecode" class="chkBox" value="e04"/>
+                        			<label for="searchListEmpmnsecode2">공무직 등 채용</label>
+                        			</li>
+                        		
+                        			<li class="left mrt">
+                        			<input type="checkbox" id="searchListEmpmnsecode3" name="searchListEmpmnsecode" class="chkBox" value="e05"/>
+                        			<label for="searchListEmpmnsecode3">개방형직위</label>
+                        			</li>
+                        		
+                        			<li class="left mrt">
+                        			<input type="checkbox" id="searchListEmpmnsecode4" name="searchListEmpmnsecode" class="chkBox" value="e06"/>
+                        			<label for="searchListEmpmnsecode4">공모직위 (중앙부처)</label>
+                        			</li>
+                        		
+                        			<li class="left mrt">
+                        			<input type="checkbox" id="searchListEmpmnsecode5" name="searchListEmpmnsecode" class="chkBox" value="e07"/>
+                        			<label for="searchListEmpmnsecode5">전입공모</label>
+                        			</li>
+                        		
+                        			<li class="left mrt">
+                        			<input type="checkbox" id="searchListEmpmnsecode6" name="searchListEmpmnsecode" class="chkBox" value="e08"/>
+                        			<label for="searchListEmpmnsecode6">공공기관 채용</label>
+                        			</li>
+                        		
+                        			<li class="left mrt">
+                        			<input type="checkbox" id="searchListEmpmnsecode7" name="searchListEmpmnsecode" class="chkBox" value="e10"/>
+                        			<label for="searchListEmpmnsecode7">교육청 채용</label>
+                        			</li>
+                        		
+                        		
+                        			
+                        			
+                        				<button onclick="fn_setApmSearchView(this); return false;" id="btnSetSearchView" class="black02 button plusBtn right" value="더보기">더보기</button>
+                        			
+                        		
+                        		</ul>
+                        	</td>
+                        </tr>
+                        <tr id="searchAditinfo" class="m_none">
+                        	<th><label for="">기타사항</label></th>
+                        	<td colspan="3">
+                        	<ul class="clearfix"> 
+                        		<li class="left">
+                        		   <input type="checkbox" id="searchAditinfo201"  name="searchAditinfo201" class="chkBox" value="Y" />
+                        		   <label for="searchAditinfo201">저소득층</label>
+                        		</li>
+                        		<li class="left pdlf">
+                        		 <input type="checkbox" id="searchAditinfo202" name="searchAditinfo202" class="chkBox" value="Y" />
+                        		 <label for="searchAditinfo202">행정인턴</label>
+                        		</li>
+                        		<li class="left pdlf">
+                        		 <input type="checkbox" id="searchAditinfo4"	  name="searchAditinfo4"   class="chkBox" value="Y" /><label for="searchAditinfo4">북한이탈주민</label>
+                        		</li>
+                        	</ul>
+                        	</td>
+                        	
+                        </tr>
+                        <tr id="tr_apmSearchView" class="m_none">
+                        	<th><label for="searchType">공모직위/개방형직위</label></th>
+	                        <td colspan="3">
+	                        	<select class="select-box" name="searchType" id="searchType">
+	                        		<option value="" >전체</option>
+	                        		<option value="05" >개방형직위 (지자체)</option>
+	                        		<option value="06" >공모직위 (중앙부처)</option>
+	                        	</select>
+	                        </td>
+                        </tr>
+                        
+                        <tr class="mobile_on">
+                        	<th><label for="serachAreaClassCd">채용지역</label></th>
+                            <td colspan="3" class="clearfix">
+								<select class="select-box left" id="serachAreaClassCd" name="serachAreaClassCd"  onchange="gfn_setGunCode('searchWorkareacode', this.value)" >
+									
+										<option value="00000">전국</option>
+									
+										<option value="11000">서울</option>
+									
+										<option value="26000">부산</option>
+									
+										<option value="27000">대구</option>
+									
+										<option value="28000">인천</option>
+									
+										<option value="12000">광주</option>
+									
+										<option value="30000">대전</option>
+									
+										<option value="31000">울산</option>
+									
+										<option value="36000">세종</option>
+									
+										<option value="41000">경기</option>
+									
+										<option value="42000">강원</option>
+									
+										<option value="43000">충북</option>
+									
+										<option value="44000">충남</option>
+									
+										<option value="45000">전북</option>
+									
+										<option value="47000">경북</option>
+									
+										<option value="48000">경남</option>
+									
+										<option value="50000">제주</option>
+									
+										<option value="90000">국외</option>
+									
+								</select>
+								
+									
+										<select class="select-box left mlf" id="searchWorkareacode" name="searchWorkareacode" title="채용 지역 상세분류">
+											<option value="">전체</option>
+											
+										</select>
+									
+									
+								
+							</td>
+                        </tr>
+                        
+                        <tr class="m_none">
+                        	<th><label for="">장애인 채용·우대</label></th>
+                        	<td colspan="3">
+                        	<ul class="clearfix">
+                        		<li class="left mrt">
+                        		<input type="checkbox" id="dspsnEmpYn" name="dspsnEmpYn"  value="Y"/>
+                        		<label for="dspsnEmpYn">장애인 채용</label>
+                        		</li>
+                        		<li class="left">
+                        		<input type="checkbox" id="dspsnPrvlYn" name="dspsnPrvlYn"  value="Y"/>
+                        		<label for="dspsnPrvlYn">장애인 우대</label>
+                        		</li>
+                        	</ul>
+                        	</td>
+                        </tr>
+                        
+                        
+                        <tr class="m_none">
+                            <th id="enrollDate"><label>공고 마감일</label></th>
+                            <td colspan="3" class="clear_after">
+                                <div class="radio mt5 mr20" id="enrollDate_div">
+                                    <button style="width: 90px;" type="button" class="r_date" id="date02" name="searchPeriod" value="3m"   onclick="periodSet()">최근 3개월</button>
+                                    <button style="width: 90px;" type="button" class="r_date" id="date03" name="searchPeriod" value="find" onclick="periodSet()">직접기간선택</button>
+                                    &nbsp;&nbsp;
+                                    <input style="width: 90px;" id="searchSdate" name="searchSdate" type="text" class="txt" onkeydown="if(event.keyCode == 13) {gfn_calendar('searchEdate'); return false;}" onclick="gfn_calendar('searchSdate');" value="" title="시작날짜" readonly/>
+                                    <button class="btn_date" type="button" onclick="gfn_calendar('searchSdate'); return false;" title="새 창"><span>시작일선택</span></button>&nbsp;
+                                    <span id="bridge" style="margin-top: 6px;">~</span>&nbsp;
+                                    <input style="width: 90px;" id="searchEdate" name="searchEdate" type="text" class="txt" onkeydown="if(event.keyCode == 13) {gfn_calendar('searchEdate'); return false;}"  onclick="gfn_calendar('searchEdate');" value="" title="종료날짜" readonly/>
+                                    <button class="btn_date" type="button" onclick="gfn_calendar('searchEdate'); return false;" title="새 창"><span>종료일선택</span></button>
+                                    
+                                </div>
+                            </td>
+                    </table>
+                </fieldset>
+                <div class="center mrtp">
+                <button type="submit" value="검색" onclick="fn_apmList();return false;" id="btnSearch" class="searchbutton01">
+					검색
+				</button>
+				
+				<button value="조건초기화" onclick="fn_apmReset();return false;" id="btnReset" class="resetbutton01 mlf">조건 초기화</button>
+				
+				</div>
+            </div>
+            <!--검색조건 E-->
+            
+            <div class="mb-scroll"><div>좌, 우로 슬라이드 해주세요</div></div>
+            <!-- 현재페이지 정보 S -->
+            <div class="mrtp50 clearfix">
+                <div class="left"> 
+                    <span>Total 200771</span>
+                    <span>(1&#47;20078)</span>
+                </div>
+                <div class="right">
+                    <label for="searchOrdr" class="left mrt">정렬순서 : </label>
+                    <select name="searchOrdr" id="searchOrdr" class="select-box left" style="margin-top: -5px;margin-right: 10px;">
+                        <option value=""  selected>
+                        	최근 게시일 순
+                        </option>
+                        <option value="2" >
+                        	공고 마감일 순
+						</option>
+                        
+                    </select>
+                    <button type="button" class="button gray m-none" style="margin-top: -5px;min-width: 50px;font-size:14px;" onclick="fn_apmList();return false;">정렬</button>
+                </div>
+            </div>
+            <!-- 현재페이지 정보 E -->
+            <!-- 리스트 : 채용공고 리스트 S-->
+            <div class="bdtable2 mrtp10 bg_fff">
+                <table id="apmTbl">
+                    <caption>
+                    
+                             
+                             일반채용 모집공고
+                             
+                             
+                             리스트 - 번호, 공고명, 기관명, 게시일, 공고마감일, 조회수로 구성</caption>
+                    <colgroup>
+                        <col width="7%" />
+                        <col width="46%" />
+                        <col width="15%" />
+                        <col width="12%" />
+                        <col width="12%" />
+                        <col width="7%" />
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th scope="col">번호</th>
+                            <th scope="col">공고명</th>
+                            <th scope="col">기관명</th>
+                            <th scope="col">공고게시일</th>                         
+                            <th scope="col">접수마감일</th>
+                            <th scope="col">조회</th>
+                        </tr>
+                    </thead>
+                    <!-- DATA -->
+                    <tbody>
+                    
+                        
+                        
+                            
+                                <tr 
+                                >
+                                    <td align="center" scope="row">1</td>
+                                    <td class="ta_l elip">
+                                        	
+                                        		
+                                        		
+                                        			
+		                                        		
+			                                            
+			                                                <div><img src="/images/icon/rec_img2.png" alt="지자체"/></div>
+			                                                                                        
+			                                            
+			                                            
+		                                            
+                                        		
+                                        	
+                                        <a style="text-overflow: inherit;overflow: auto;word-break: break-word;white-space: inherit;" href="javascript:fn_apmView('020', '308586')">
+                                           
+                                                    서울특별시 강동구 시간선택제임기제공무원 라급 채용 공고 (상담전문요원)
+                                         
+                                        </a>
+                                      
+                                    </td>
+                                    <td align="center">
+                                       
+                                                서울특별시 강동구
+                                       
+                                    </td>
+                                    <td align="center">
+                                        
+                                            
+                                                2026-11-13</b>
+                                            
+                                            
+                                        
+                                    </td>  
+                                     
+                                   
+                                    
+                                        <td align="center">
+                                            
+                                                
+                                                
+                                                	
+                                                	
+	                                                    2026-11-25
+                                                    
+                                                
+                                            
+                                        </td>
+                                    
+                                    
+                                    
+                                    <td align="center">
+                                        
+                                            
+                                            
+                                                47
+                                            
+                                        
+                                    </td>
+                                </tr>
+                            
+                                <tr 
+                                >
+                                    <td align="center" scope="row">2</td>
+                                    <td class="ta_l elip">
+                                        	
+                                        		
+                                        		
+                                        			
+		                                        		
+			                                            
+			                                                <div><img src="/images/icon/rec_img2.png" alt="지자체"/></div>
+			                                                                                        
+			                                            
+			                                            
+		                                            
+                                        		
+                                        	
+                                        <a style="text-overflow: inherit;overflow: auto;word-break: break-word;white-space: inherit;" href="javascript:fn_apmView('020', '308585')">
+                                           
+                                                    서울특별시 강동구 시간선택제임기제공무원 마급 채용 공고(유기동물사양관리사)
+                                         
+                                        </a>
+                                      
+                                    </td>
+                                    <td align="center">
+                                       
+                                                서울특별시 강동구
+                                       
+                                    </td>
+                                    <td align="center">
+                                        
+                                            
+                                                2026-11-13</b>
+                                            
+                                            
+                                        
+                                    </td>  
+                                     
+                                   
+                                    
+                                        <td align="center">
+                                            
+                                                
+                                                
+                                                	
+                                                	
+	                                                    2026-11-25
+                                                    
+                                                
+                                            
+                                        </td>
+                                    
+                                    
+                                    
+                                    <td align="center">
+                                        
+                                            
+                                            
+                                                18
+                                            
+                                        
+                                    </td>
+                                </tr>
+                            
+                                <tr 
+                                >
+                                    <td align="center" scope="row">3</td>
+                                    <td class="ta_l elip">
+                                        	
+                                        		
+                                        		
+                                        			
+		                                        		
+			                                                                                        
+			                                            
+			                                            
+			                                                <div><img src="/images/icon/rec_img4.png" alt="교육"/></div>
+			                                            
+		                                            
+                                        		
+                                        	
+                                        <a style="text-overflow: inherit;overflow: auto;word-break: break-word;white-space: inherit;" href="javascript:fn_apmView('020', '308583')">
+                                           
+                                                    [서울특별시강서양천교육지원청]서울지향초등학교 학교보안관 채용계획 공고
+                                         
+                                        </a>
+                                      
+                                    </td>
+                                    <td align="center">
+                                       
+                                                서울특별시교육청 서울특별시강서양천교육지원청
+                                       
+                                    </td>
+                                    <td align="center">
+                                        
+                                            
+                                                2026-11-13</b>
+                                            
+                                            
+                                        
+                                    </td>  
+                                     
+                                   
+                                    
+                                        <td align="center">
+                                            
+                                                
+                                                
+                                                	
+                                                	
+	                                                    2026-11-18
+                                                    
+                                                
+                                            
+                                        </td>
+                                    
+                                    
+                                    
+                                    <td align="center">
+                                        
+                                            
+                                            
+                                                30
+                                            
+                                        
+                                    </td>
+                                </tr>
+                            
+                                <tr 
+                                >
+                                    <td align="center" scope="row">4</td>
+                                    <td class="ta_l elip">
+                                        	
+                                        		
+                                        		
+                                        			
+		                                        		
+			                                                                                        
+			                                            
+			                                            
+			                                                <div><img src="/images/icon/rec_img4.png" alt="교육"/></div>
+			                                            
+		                                            
+                                        		
+                                        	
+                                        <a style="text-overflow: inherit;overflow: auto;word-break: break-word;white-space: inherit;" href="javascript:fn_apmView('020', '308582')">
+                                           
+                                                    [서울특별시강서양천교육지원청]서울정곡초등학교 학교보안관 채용계획 공고
+                                         
+                                        </a>
+                                      
+                                    </td>
+                                    <td align="center">
+                                       
+                                                서울특별시교육청 서울특별시강서양천교육지원청
+                                       
+                                    </td>
+                                    <td align="center">
+                                        
+                                            
+                                                2026-11-13</b>
+                                            
+                                            
+                                        
+                                    </td>  
+                                     
+                                   
+                                    
+                                        <td align="center">
+                                            
+                                                
+                                                
+                                                	
+                                                	
+	                                                    2026-11-18
+                                                    
+                                                
+                                            
+                                        </td>
+                                    
+                                    
+                                    
+                                    <td align="center">
+                                        
+                                            
+                                            
+                                                13
+                                            
+                                        
+                                    </td>
+                                </tr>
+                            
+                                <tr 
+                                >
+                                    <td align="center" scope="row">5</td>
+                                    <td class="ta_l elip">
+                                        	
+                                        		
+                                        		
+                                        			
+		                                        		
+			                                                                                        
+			                                            
+			                                            
+			                                                <div><img src="/images/icon/rec_img4.png" alt="교육"/></div>
+			                                            
+		                                            
+                                        		
+                                        	
+                                        <a style="text-overflow: inherit;overflow: auto;word-break: break-word;white-space: inherit;" href="javascript:fn_apmView('020', '308581')">
+                                           
+                                                    [서울특별시강서양천교육지원청]서울월촌초등학교 학교보안관 채용계획 공고
+                                         
+                                        </a>
+                                      
+                                    </td>
+                                    <td align="center">
+                                       
+                                                서울특별시교육청 서울특별시강서양천교육지원청
+                                       
+                                    </td>
+                                    <td align="center">
+                                        
+                                            
+                                                2026-11-13</b>
+                                            
+                                            
+                                        
+                                    </td>  
+                                     
+                                   
+                                    
+                                        <td align="center">
+                                            
+                                                
+                                                
+                                                	
+                                                	
+	                                                    2026-11-18
+                                                    
+                                                
+                                            
+                                        </td>
+                                    
+                                    
+                                    
+                                    <td align="center">
+                                        
+                                            
+                                            
+                                                10
+                                            
+                                        
+                                    </td>
+                                </tr>
+                            
+                                <tr 
+                                >
+                                    <td align="center" scope="row">6</td>
+                                    <td class="ta_l elip">
+                                        	
+                                        		
+                                        		
+                                        			
+		                                        		
+			                                                                                        
+			                                            
+			                                            
+			                                                <div><img src="/images/icon/rec_img4.png" alt="교육"/></div>
+			                                            
+		                                            
+                                        		
+                                        	
+                                        <a style="text-overflow: inherit;overflow: auto;word-break: break-word;white-space: inherit;" href="javascript:fn_apmView('020', '308580')">
+                                           
+                                                    [서울특별시강서양천교육지원청]서울신원초등학교 학교보안관 채용계획 공고
+                                         
+                                        </a>
+                                      
+                                    </td>
+                                    <td align="center">
+                                       
+                                                서울특별시교육청 서울특별시강서양천교육지원청
+                                       
+                                    </td>
+                                    <td align="center">
+                                        
+                                            
+                                                2026-11-13</b>
+                                            
+                                            
+                                        
+                                    </td>  
+                                     
+                                   
+                                    
+                                        <td align="center">
+                                            
+                                                
+                                                
+                                                	
+                                                	
+	                                                    2026-11-18
+                                                    
+                                                
+                                            
+                                        </td>
+                                    
+                                    
+                                    
+                                    <td align="center">
+                                        
+                                            
+                                            
+                                                10
+                                            
+                                        
+                                    </td>
+                                </tr>
+                            
+                                <tr 
+                                >
+                                    <td align="center" scope="row">7</td>
+                                    <td class="ta_l elip">
+                                        	
+                                        		
+                                        		
+                                        			
+		                                        		
+			                                                                                        
+			                                            
+			                                            
+			                                                <div><img src="/images/icon/rec_img4.png" alt="교육"/></div>
+			                                            
+		                                            
+                                        		
+                                        	
+                                        <a style="text-overflow: inherit;overflow: auto;word-break: break-word;white-space: inherit;" href="javascript:fn_apmView('020', '308579')">
+                                           
+                                                    [서울특별시강서양천교육지원청]서울신목초등학교 학교보안관 채용계획 공고
+                                         
+                                        </a>
+                                      
+                                    </td>
+                                    <td align="center">
+                                       
+                                                서울특별시교육청 서울특별시강서양천교육지원청
+                                       
+                                    </td>
+                                    <td align="center">
+                                        
+                                            
+                                                2026-11-13</b>
+                                            
+                                            
+                                        
+                                    </td>  
+                                     
+                                   
+                                    
+                                        <td align="center">
+                                            
+                                                
+                                                
+                                                	
+                                                	
+	                                                    2026-11-18
+                                                    
+                                                
+                                            
+                                        </td>
+                                    
+                                    
+                                    
+                                    <td align="center">
+                                        
+                                            
+                                            
+                                                14
+                                            
+                                        
+                                    </td>
+                                </tr>
+                            
+                                <tr 
+                                >
+                                    <td align="center" scope="row">8</td>
+                                    <td class="ta_l elip">
+                                        	
+                                        		
+                                        		
+                                        			
+		                                        		
+			                                                                                        
+			                                            
+			                                            
+			                                                <div><img src="/images/icon/rec_img4.png" alt="교육"/></div>
+			                                            
+		                                            
+                                        		
+                                        	
+                                        <a style="text-overflow: inherit;overflow: auto;word-break: break-word;white-space: inherit;" href="javascript:fn_apmView('020', '308578')">
+                                           
+                                                    [서울특별시강서양천교육지원청]서울신강초등학교 학교보안관 채용계획 공고
+                                         
+                                        </a>
+                                      
+                                    </td>
+                                    <td align="center">
+                                       
+                                                서울특별시교육청 서울특별시강서양천교육지원청
+                                       
+                                    </td>
+                                    <td align="center">
+                                        
+                                            
+                                                2026-11-13</b>
+                                            
+                                            
+                                        
+                                    </td>  
+                                     
+                                   
+                                    
+                                        <td align="center">
+                                            
+                                                
+                                                
+                                                	
+                                                	
+	                                                    2026-11-18
+                                                    
+                                                
+                                            
+                                        </td>
+                                    
+                                    
+                                    
+                                    <td align="center">
+                                        
+                                            
+                                            
+                                                9
+                                            
+                                        
+                                    </td>
+                                </tr>
+                            
+                                <tr 
+                                >
+                                    <td align="center" scope="row">9</td>
+                                    <td class="ta_l elip">
+                                        	
+                                        		
+                                        		
+                                        			
+		                                        		
+			                                                                                        
+			                                            
+			                                            
+			                                                <div><img src="/images/icon/rec_img4.png" alt="교육"/></div>
+			                                            
+		                                            
+                                        		
+                                        	
+                                        <a style="text-overflow: inherit;overflow: auto;word-break: break-word;white-space: inherit;" href="javascript:fn_apmView('020', '308577')">
+                                           
+                                                    [서울특별시강서양천교육지원청]서울목원초등학교 학교보안관 채용계획 공고
+                                         
+                                        </a>
+                                      
+                                    </td>
+                                    <td align="center">
+                                       
+                                                서울특별시교육청 서울특별시강서양천교육지원청
+                                       
+                                    </td>
+                                    <td align="center">
+                                        
+                                            
+                                                2026-11-13</b>
+                                            
+                                            
+                                        
+                                    </td>  
+                                     
+                                   
+                                    
+                                        <td align="center">
+                                            
+                                                
+                                                
+                                                	
+                                                	
+	                                                    2026-11-18
+                                                    
+                                                
+                                            
+                                        </td>
+                                    
+                                    
+                                    
+                                    <td align="center">
+                                        
+                                            
+                                            
+                                                8
+                                            
+                                        
+                                    </td>
+                                </tr>
+                            
+                                <tr 
+                                >
+                                    <td align="center" scope="row">10</td>
+                                    <td class="ta_l elip">
+                                        	
+                                        		
+                                        		
+                                        			
+		                                        		
+			                                                                                        
+			                                            
+			                                            
+			                                                <div><img src="/images/icon/rec_img4.png" alt="교육"/></div>
+			                                            
+		                                            
+                                        		
+                                        	
+                                        <a style="text-overflow: inherit;overflow: auto;word-break: break-word;white-space: inherit;" href="javascript:fn_apmView('020', '308576')">
+                                           
+                                                    [서울특별시강서양천교육지원청]서울등현초등학교 학교보안관 채용계획 공고
+                                         
+                                        </a>
+                                      
+                                    </td>
+                                    <td align="center">
+                                       
+                                                서울특별시교육청 서울특별시강서양천교육지원청
+                                       
+                                    </td>
+                                    <td align="center">
+                                        
+                                            
+                                                2026-11-13</b>
+                                            
+                                            
+                                        
+                                    </td>  
+                                     
+                                   
+                                    
+                                        <td align="center">
+                                            
+                                                
+                                                
+                                                	
+                                                	
+	                                                    2026-11-18
+                                                    
+                                                
+                                            
+                                        </td>
+                                    
+                                    
+                                    
+                                    <td align="center">
+                                        
+                                            
+                                            
+                                                8
+                                            
+                                        
+                                    </td>
+                                </tr>
+                            
+                        
+                    
+                    </tbody>
+                </table>
+            </div>
+            <!-- 리스트 : 채용공고 리스트 E-->
+            
+            <!-- 페이징 S-->
+            <div class="pagenum1 mt30 center" id="paging">
+                <ul class="clear_after">
+                    <li><a href="#" onclick="fn_egov_link_page(1); return false;"><image src=/images/icon/left02.png alt=처음페이지 border=0/></a></li><li><a href="#" onclick="fn_egov_link_page(1); return false;"><image src=/images/icon/left01.png alt=이전페이지 border=0/></a></li><li><a class="active page-text" style="margin: 0 5px;width:25px;" title=선택됨>1</a></li><li><a class="page-text" style="margin: 0 5px;width:25px;" href="#" onclick="fn_egov_link_page(2); return false;">2</a><li><a class="page-text" style="margin: 0 5px;width:25px;" href="#" onclick="fn_egov_link_page(3); return false;">3</a><li><a class="page-text" style="margin: 0 5px;width:25px;" href="#" onclick="fn_egov_link_page(4); return false;">4</a><li><a class="page-text" style="margin: 0 5px;width:25px;" href="#" onclick="fn_egov_link_page(5); return false;">5</a><li><a href="#" onclick="fn_egov_link_page(6); return false;"><image src=/images/icon/right01.png alt=다음페이지 border=0/></a></li><li><a href="#" onclick="fn_egov_link_page(20078); return false;"><image src=/images/icon/right02.png alt=마지막페이지 border=0/></a></li>
+
+                    <input id="pageIndex" name="pageIndex" type="hidden" value="1"/>
+                </ul>
+            </div>
+            <!-- 페이징 E-->
+            </form>
+            
+            <button id="btnInsert" class="mint button02" type="submit" onclick="fn_apmWrite();return false;" style="display:none">
+                등록
+            </button>
+        </div>
+    </div>
+    <script src='/jsp/apm/apmListNew.js'></script>
+    <!-- sub page content : E -->
+<!-- </body>
+BODY END
+</html> -->
+
+             
+            </div>
+            
+        </div>
+        <!--CONTAINER : E-->
+        <div class="frame_footer">
+            
+
+
+<script>
+        /*나라일터 관련페이지 열고닫기*/
+        function showGovList(){
+            if($('#GovList').is(':visible')){
+                $('#GovList').slideUp(300);
+            }else{
+                $('#GovList').slideDown(300);
+            }
+        }
+
+        $(document).ready(function(){
+            
+            if( navigator.userAgent.match(/Android/i)
+               || navigator.userAgent.match(/webOS/i)
+               || navigator.userAgent.match(/iPhone/i)
+               || navigator.userAgent.match(/iPad/i)
+               || navigator.userAgent.match(/iPod/i)
+               || navigator.userAgent.match(/BlackBerry/i)
+               || navigator.userAgent.match(/Windows Phone/i)
+               ){  // 모바일 화면
+                $("#MobilePcChange").show();
+                }
+               else { // pc 화면
+                $("#MobilePcChange").hide();
+                }
+        });
+</script>
+
+ <footer>
+            <div id="footer" class="inner">
+                <h3><a href="#">인사혁신처</a></h3>
+                <div class="familysite mrtp clearfix">
+                    <select class="m-none" name="selFamilySite" id="selFamilySite" title="나라일터 관련 사이트 바로가기">
+                        <option value="">나라일터 관련 사이트</option>
+                        <option value="http://www.president.go.kr/" title="이동 버튼을 클릭하여 이동하세요">대통령실</option>
+                        <option value="http://www.assembly.go.kr/" title="이동 버튼을 클릭하여 이동하세요">국회</option>
+                        <option value="https://www.scourt.go.kr/" title="이동 버튼을 클릭하여 이동하세요">대법원</option>
+                        <option value="http://www.nec.go.kr/" title="이동 버튼을 클릭하여 이동하세요">중앙선거관리위원회</option>
+                        <option value="http://www.ccourt.go.kr/" title="이동 버튼을 클릭하여 이동하세요">헌법재판소</option>
+                        <option value="http://www.pmo.go.kr/" title="이동 버튼을 클릭하여 이동하세요">국무조정실</option>
+                        <option value="http://www.mosf.go.kr/" title="이동 버튼을 클릭하여 이동하세요">기획재정부</option>
+                        <option value="http://www.msip.go.kr/" title="이동 버튼을 클릭하여 이동하세요">과학기술정보통신부</option>
+                        <option value="http://www.moe.go.kr/" title="이동 버튼을 클릭하여 이동하세요">교육부</option>
+                        <option value="http://www.mofa.go.kr/" title="이동 버튼을 클릭하여 이동하세요">외교부</option>
+                        <option value="http://www.unikorea.go.kr/" title="이동 버튼을 클릭하여 이동하세요">통일부</option>
+                        <option value="http://www.moj.go.kr/HP/MOJ03/index.do?strOrgGbnCd=100000" title="이동 버튼을 클릭하여 이동하세요">법무부</option>
+                        <option value="http://www.mnd.go.kr/" title="이동 버튼을 클릭하여 이동하세요">국방부</option>
+                        <option value="http://www.mcst.go.kr/" title="이동 버튼을 클릭하여 이동하세요">문화체육관광부</option>
+                        <option value="http://www.mafra.go.kr/" title="이동 버튼을 클릭하여 이동하세요">농림축산식품부</option>
+                        <option value="http://www.motie.go.kr/" title="이동 버튼을 클릭하여 이동하세요">산업통상자원부</option>
+                        <option value="http://www.mohw.go.kr/" title="이동 버튼을 클릭하여 이동하세요">보건복지부</option>
+                        <option value="http://www.me.go.kr/" title="이동 버튼을 클릭하여 이동하세요">환경부</option>
+                        <option value="http://www.moel.go.kr/" title="이동 버튼을 클릭하여 이동하세요">고용노동부</option>
+                        <option value="http://www.mogef.go.kr/" title="이동 버튼을 클릭하여 이동하세요">여성가족부</option>
+                        <option value="http://www.mof.go.kr/" title="이동 버튼을 클릭하여 이동하세요">해양수산부</option>
+                        <option value="http://www.moleg.go.kr/" title="이동 버튼을 클릭하여 이동하세요">법제처</option>
+                        <option value="http://www.mpva.go.kr/" title="이동 버튼을 클릭하여 이동하세요">국가보훈부</option>
+                        <option value="http://www.mfds.go.kr/" title="이동 버튼을 클릭하여 이동하세요">식품의약품안전처</option>
+                        <option value="http://www.ftc.go.kr/" title="이동 버튼을 클릭하여 이동하세요">공정거래위원회</option>
+                        <option value="http://www.fsc.go.kr/" title="이동 버튼을 클릭하여 이동하세요">금융위원회</option>
+                        <option value="http://www.acrc.go.kr/" title="이동 버튼을 클릭하여 이동하세요">국민권익위원회</option>
+                        <option value="http://www.kcc.go.kr/user.do" title="이동 버튼을 클릭하여 이동하세요">방송통신위원회</option>
+                        <option value="http://www.humanrights.go.kr/" title="이동 버튼을 클릭하여 이동하세요">국가인권위원회</option>
+                    </select>
+                    <select class="m-block" name="selFamilySite" id="selFamilySite" onchange="if($(this).val()) window.open($('#selFamilySite').val());return false;">
+                        <option value="">나라일터 관련 사이트</option>
+                        <option value="http://www.president.go.kr/" title="새창 이동">대통령실</option>
+                        <option value="http://www.assembly.go.kr/" title="새창 이동">국회</option>
+                        <option value="https://www.scourt.go.kr/" title="새창 이동">대법원</option>
+                        <option value="http://www.nec.go.kr/" title="새창 이동">중앙선거관리위원회</option>
+                        <option value="http://www.ccourt.go.kr/" title="새창 이동">헌법재판소</option>
+                        <option value="http://www.pmo.go.kr/" title="새창 이동">국무조정실</option>
+                        <option value="http://www.mosf.go.kr/" title="새창 이동">기획재정부</option>
+                        <option value="http://www.msip.go.kr/" title="새창 이동">과학기술정보통신부</option>
+                        <option value="http://www.moe.go.kr/" title="새창 이동">교육부</option>
+                        <option value="http://www.mofa.go.kr/" title="새창 이동">외교부</option>
+                        <option value="http://www.unikorea.go.kr/" title="새창 이동">통일부</option>
+                        <option value="http://www.moj.go.kr/HP/MOJ03/index.do?strOrgGbnCd=100000" title="새창 이동">법무부</option>
+                        <option value="http://www.mnd.go.kr/" title="새창 이동">국방부</option>
+                        <option value="http://www.mcst.go.kr/" title="새창 이동">문화체육관광부</option>
+                        <option value="http://www.mafra.go.kr/" title="새창 이동">농림축산식품부</option>
+                        <option value="http://www.motie.go.kr/" title="새창 이동">산업통상자원부</option>
+                        <option value="http://www.mohw.go.kr/" title="새창 이동">보건복지부</option>
+                        <option value="http://www.me.go.kr/" title="새창 이동">환경부</option>
+                        <option value="http://www.moel.go.kr/" title="새창 이동">고용노동부</option>
+                        <option value="http://www.mogef.go.kr/" title="새창 이동">여성가족부</option>
+                        <option value="http://www.mof.go.kr/" title="새창 이동">해양수산부</option>
+                        <option value="http://www.moleg.go.kr/" title="새창 이동">법제처</option>
+                        <option value="http://www.mpva.go.kr/" title="새창 이동">국가보훈부</option>
+                        <option value="http://www.mfds.go.kr/" title="새창 이동">식품의약품안전처</option>
+                        <option value="http://www.ftc.go.kr/" title="새창 이동">공정거래위원회</option>
+                        <option value="http://www.fsc.go.kr/" title="새창 이동">금융위원회</option>
+                        <option value="http://www.acrc.go.kr/" title="새창 이동">국민권익위원회</option>
+                        <option value="http://www.kcc.go.kr/user.do" title="새창 이동">방송통신위원회</option>
+                        <option value="http://www.humanrights.go.kr/" title="새창 이동">국가인권위원회</option>
+                    </select>
+                    <button type="button" class="button gray m-none right" style="min-width: 50px;margin-left:10px;font-size:14px;" onclick="if($('#selFamilySite').val()) window.open($('#selFamilySite').val());return false;" title="새창 열기">이동</button>
+                </div>
+                <div class="address">
+            <ul class="ftmenu">
+                <li><a href="bbdList.do?searchJobsecode=070&amp;searchBbssecode=30&amp;menuNo=174&amp;isFooter=Y" title="">자주찾는질문</a></li>
+                <li><a href="privacypolicy.do?menuNo=176&amp;isFooter=Y" title="개인정보처리방침" style="color: darkblue; font-weight:bold">개인정보처리방침</a></li>
+            </ul>
+            <ul class="ftmenu">
+                        
+                <li><a href="bbdWrite.do?searchJobsecode=091&amp;searchBbssecode=10&amp;menuNo=179&amp;isFooter=Y" title="">홈페이지개선의견</a></li>
+                <li><a href="contact.do?menuNo=178" title="">담당연락처</a></li>
+                    </ul>
+                    <div class="addr">
+                        <p>(30128)세종특별자치시 정부2청사로 13(나성동) 인사혁신처</p>
+                        <p style="color: #fe5901;">민원안내콜센터 110</p>
+                    </div>
+
+
+    <!-- 나라일터관련사이트 -->
+    
+    <!-- 제공자 정보 -->
+            
+            
+        </div>
+
+    <div class="copy">
+        COPYRIGHT &copy; MINISTRY OF PERSONNEL MANAGEMENT.<br>ALL RIGHTS RESERVED</div>
+        <a title="새 창 열림" href="http://www.wa.or.kr/board/list.asp?BoardID=0006" target="_blank" style="float:left; width:100px; height:74px; text-align:center; margin: 0 auto; display: block;">
+         <img class="wa" alt="과학기술정보통신부 WEB 접근성 품질인증 마크(한국정보접근성인증평가원, 2025.11.30~2026.11.29)" src="/jsp/draft/image/common/정보통신접근성 품질인증 마크.png" style="width:100%;"/>
+     </a>
+    </div>
+</footer>
+<!-- footer : E //-->
+
+
+        </div>
+    </div>
+</body>
+</html>

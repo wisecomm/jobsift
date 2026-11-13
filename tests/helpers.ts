@@ -24,6 +24,7 @@ export interface FakeItem {
   id: string
   createdAt: string
   title?: string
+  company?: string
   tags?: string
   areas?: string[]
   careerType?: string
@@ -53,7 +54,7 @@ export function fakePage(items: FakeItem[], totalPages: number): string {
   const content = items.map((item) => ({
     id: item.id,
     title: item.title ?? `전산 공고 ${item.id}`,
-    companyName: `회사 ${item.id}`,
+    companyName: item.company ?? `회사 ${item.id}`,
     createdAt: item.createdAt,
     applicationPeriod: { start: item.createdAt, end: item.deadline ?? '2099-01-01T23:00:00+09:00' },
     careerType: item.careerType ?? '4',

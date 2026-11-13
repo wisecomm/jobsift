@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { PostingKey, PostingPatch, StoredPosting } from '../shared/types'
+import { postingSources, type PostingKey, type PostingPatch, type StoredPosting } from '../shared/types'
 import { Pager } from './Pager'
 import { PostingCard } from './PostingCard'
 import { INITIAL_VIEW, selectPostings, type CareerOption, type ListView } from './selectPostings'
@@ -24,7 +24,7 @@ export function PostingsView({ postings, hasCriteria, onUpdate, onOpenSettings }
   const [view, setView] = useState<ListView>(INITIAL_VIEW)
   const change = (patch: Partial<ListView>) => setView((v) => ({ ...v, ...patch, page: 1 }))
   const selection = useMemo(() => selectPostings(postings, view), [postings, view])
-  const sites = useMemo(() => [...new Set(postings.map((p) => p.site))], [postings])
+  const sites = useMemo(() => [...new Set(postings.flatMap((p) => postingSources(p).map((s) => s.site)))], [postings])
   const filtered = view.site !== 'all' || view.career !== 'all' || view.query.trim() !== ''
   const now = new Date()
 

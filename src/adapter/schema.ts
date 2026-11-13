@@ -40,14 +40,52 @@ const nextFlightQuery = z.object({
   noDeadlineFromYear: z.number().int(),
 })
 
-// A second member (kind: "html-selectors") joins here when the Saramin adapter lands.
-const extract = z.discriminatedUnion('kind', [nextFlightQuery])
+const regexString = z.string().min(1).refine(
+  (s) => {
+    try {
+      new RegExp(s)
+      return true
+    } catch {
+      return false
+    }
+  },
+  '유효한 정규식이어야 합니다',
+)
+
+const htmlField = z.object({
+  selector: z.string().min(1).optional(),
+  attr: z.string().min(1).optional(),
+  pattern: regexString.optional(),
+})
+
+const htmlSelectors = z.object({
+  kind: z.literal('html-selectors'),
+  readySelector: z.string().min(1),
+  itemSelector: z.string().min(1),
+  emptyItemSelector: z.string().min(1).optional(),
+  totalCountSelector: z.string().min(1).optional(),
+  fields: z.object({
+    externalId: htmlField,
+    title: htmlField,
+    company: htmlField,
+    postedAt: htmlField,
+    deadline: htmlField.optional(),
+  }),
+  modifiedMarker: z.string().min(1).optional(),
+  locationPartsSelector: z.string().min(1).optional(),
+  inferLocationFromCompany: z.boolean().default(false),
+  careerSelector: z.string().min(1).optional(),
+  jobTagsSelector: z.string().min(1).optional(),
+})
+
+const extract = z.discriminatedUnion('kind', [nextFlightQuery, htmlSelectors])
 
 export const siteAdapterSchema = z.object({
   id: z.string().regex(/^[a-z][a-z0-9-]*$/),
   name: z.string().min(1),
   homeUrl: z.string().url(),
   requiresLogin: z.boolean(),
+  postedAtPrecision: z.enum(['datetime', 'date']).default('datetime'),
   version: z.number().int().positive(),
   search: z.object({
     urlTemplate: z
@@ -66,6 +104,8 @@ export const siteAdapterSchema = z.object({
 
 export type SiteAdapter = z.infer<typeof siteAdapterSchema>
 export type NextFlightQueryExtract = z.infer<typeof nextFlightQuery>
+export type HtmlSelectorsExtract = z.infer<typeof htmlSelectors>
+export type HtmlFieldRule = z.infer<typeof htmlField>
 
 export function parseAdapter(json: unknown): SiteAdapter {
   return siteAdapterSchema.parse(json)

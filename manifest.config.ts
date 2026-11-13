@@ -6,7 +6,12 @@ export default defineManifest({
   version: '0.1.0',
   description: '내 PC에서 조건에 맞는 채용공고를 모아 보여줍니다.',
   permissions: ['storage'],
-  host_permissions: ['https://www.jobkorea.co.kr/*', 'https://generativelanguage.googleapis.com/*'],
+  host_permissions: [
+    'https://www.jobkorea.co.kr/*',
+    'https://www.saramin.co.kr/*',
+    'https://www.gojobs.go.kr/*',
+    'https://generativelanguage.googleapis.com/*',
+  ],
   background: { service_worker: 'src/background/service-worker.ts', type: 'module' },
   action: { default_title: '채용공고 모음' },
 })

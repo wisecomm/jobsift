@@ -46,7 +46,8 @@ describe('parseAdapter', () => {
 
 describe('adapter registry', () => {
   it('parses every bundled adapter with a unique id', () => {
-    expect(adapters.length).toBeGreaterThan(0)
+    expect(adapterIds).toEqual(['jobkorea', 'saramin', 'gojobs'])
+    expect(adapters).toHaveLength(3)
     expect(new Set(adapterIds).size).toBe(adapterIds.length)
   })
 

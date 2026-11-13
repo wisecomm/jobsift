@@ -59,9 +59,14 @@ describe('selectPostings filters', () => {
     expect(pick('any')).toEqual(['any'])
   })
 
-  it('filters by site', () => {
-    const sites = [stored('1'), stored('2', { site: 'saramin' })]
-    expect(ids(selectPostings(sites, view({ site: 'saramin' })).rows)).toEqual(['2'])
+  it('filters by site including alsoOn sources', () => {
+    const sites = [
+      stored('1'),
+      stored('2', { site: 'saramin' }),
+      stored('3', { site: 'jobkorea', alsoOn: [{ site: 'saramin', externalId: 's3', url: 'https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=s3' }] }),
+    ]
+    expect(ids(selectPostings(sites, view({ site: 'saramin' })).rows)).toEqual(['2', '3'])
+    expect(ids(selectPostings(sites, view({ site: 'jobkorea' })).rows)).toEqual(['1', '3'])
   })
 
   it('searches title and company, ignoring case and surrounding space', () => {

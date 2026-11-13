@@ -1,10 +1,11 @@
 import type { SiteAdapter } from '../adapter/schema'
-import type { CollectionSummary, RejectGate, SearchCriteria } from '../shared/types'
+import { DAY_MS } from '../shared/date'
+import type { CollectionSummary, PendingPosting, RejectGate, SearchCriteria, StoredPosting } from '../shared/types'
 import type { Store } from '../storage/store'
 import { collect } from './collect'
+import { addSource, dedupKey } from './dedup'
 import { evaluate } from './evaluate'
 
-const DAY_MS = 24 * 60 * 60 * 1000
 const DEADLINE_LESS_DISCARD_DAYS = 60
 
 export interface RunDeps {
@@ -62,6 +63,10 @@ export async function runCollection(
     sleep,
   })
 
+  const [existingPostings, existingPending] = await Promise.all([store.listPostings(), store.listPending()])
+  const storedByKey = new Map<string, StoredPosting>(existingPostings.map((p) => [dedupKey(p), p]))
+  const pendingByKey = new Map<string, PendingPosting>(existingPending.map((p) => [dedupKey(p), p]))
+
   const summary: CollectionSummary = {
     scanned: postings.length,
     saved: 0,
@@ -75,11 +80,35 @@ export async function runCollection(
   }
   for (const posting of postings) {
     const result = evaluate(posting, criteria, now, { requireKeywordMatch: !aiOn })
+    if (result.kind === 'pass') {
+      const key = dedupKey(posting)
+      const matchStored = storedByKey.get(key)
+      if (matchStored && matchStored.site !== posting.site) {
+        const merged = addSource(matchStored, posting, result.matchedKeywords)
+        if (merged) {
+          await store.putPosting(merged)
+          storedByKey.set(key, merged)
+        }
+        continue
+      }
+      const matchPending = pendingByKey.get(key)
+      if (matchPending && matchPending.site !== posting.site) {
+        const merged = addSource(matchPending, posting, result.matchedKeywords)
+        if (merged) {
+          await store.putPending(merged)
+          pendingByKey.set(key, merged)
+        }
+        continue
+      }
+    }
+
     if (result.kind === 'pass' && aiOn) {
-      await store.putPending({ ...posting, matchedKeywords: result.matchedKeywords, queuedAt: nowIso })
+      const item: PendingPosting = { ...posting, matchedKeywords: result.matchedKeywords, queuedAt: nowIso }
+      await store.putPending(item)
+      pendingByKey.set(dedupKey(item), item)
       summary.queued++
     } else if (result.kind === 'pass') {
-      const stored = await store.addPosting({
+      const item: StoredPosting = {
         ...posting,
         status: 'new',
         memo: '',
@@ -88,8 +117,12 @@ export async function runCollection(
         scoreReason: null,
         collectedAt: nowIso,
         updatedAt: nowIso,
-      })
-      if (stored) summary.saved++
+      }
+      const stored = await store.addPosting(item)
+      if (stored) {
+        storedByKey.set(dedupKey(item), item)
+        summary.saved++
+      }
     } else {
       await store.putDiscard({
         site: posting.site,

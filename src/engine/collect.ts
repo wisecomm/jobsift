@@ -1,4 +1,5 @@
 import type { SiteAdapter } from '../adapter/schema'
+import { kstDay } from '../shared/date'
 import type { JobPosting, SearchCriteria, StopReason } from '../shared/types'
 import { buildSearchUrl } from './buildSearchUrl'
 import { extractPage } from './extractPostings'
@@ -36,6 +37,10 @@ export async function collect(
   const errors: Record<string, string> = {}
   let requested = false
 
+  const dateOnly = adapter.postedAtPrecision === 'date'
+  const isBeforeCutoff = (postedAtMs: number, cutoffMs: number) =>
+    dateOnly ? kstDay(postedAtMs) < kstDay(cutoffMs) : postedAtMs < cutoffMs
+
   for (const keyword of criteria.keywords) {
     const cutoff = cutoffFor(keyword).getTime()
     const found = new Map<string, JobPosting>()
@@ -46,14 +51,14 @@ export async function collect(
         requested = true
         const page = adapter.search.firstPage + n
         const html = await fetchHtml(buildSearchUrl(adapter, criteria, keyword, page))
-        const { postings, totalPages } = extractPage(adapter, html)
+        const { postings, totalPages, modifiedIds } = extractPage(adapter, html)
 
         // The site's order is not guaranteed to be strict, so one stale item must not hide fresh ones after it on the same page.
         let pageStop: StopReason | null = null
         for (const posting of postings) {
-          if (Date.parse(posting.postedAt) < cutoff) pageStop ??= 'cutoff'
+          if (isBeforeCutoff(Date.parse(posting.postedAt), cutoff)) pageStop ??= 'cutoff'
           else if (knownIds.has(posting.externalId)) {
-            if (!scanPastKnown?.(keyword)) pageStop ??= 'known'
+            if (!scanPastKnown?.(keyword) && !modifiedIds?.has(posting.externalId)) pageStop ??= 'known'
           } else found.set(posting.externalId, posting)
         }
         if (pageStop) {

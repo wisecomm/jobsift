@@ -1,4 +1,6 @@
+import gojobsJson from '../../adapters/gojobs.json'
 import jobkoreaJson from '../../adapters/jobkorea.json'
+import saraminJson from '../../adapters/saramin.json'
 import { parseAdapter, type SiteAdapter } from './schema'
 
 /** Parses every bundled adapter once. A new adapter is added to this list and nowhere else. */
@@ -12,7 +14,7 @@ export function buildRegistry(bundled: readonly unknown[]): ReadonlyMap<string, 
   return registry
 }
 
-const registry = buildRegistry([jobkoreaJson])
+const registry = buildRegistry([jobkoreaJson, saraminJson, gojobsJson])
 
 export const adapters: readonly SiteAdapter[] = [...registry.values()]
 export const adapterIds: readonly string[] = adapters.map((adapter) => adapter.id)

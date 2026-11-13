@@ -1,0 +1,36 @@
+{
+  "id": "gojobs",
+  "name": "나라일터",
+  "homeUrl": "https://www.gojobs.go.kr",
+  "requiresLogin": false,
+  "postedAtPrecision": "date",
+  "version": 1,
+  "search": {
+    "urlTemplate": "https://www.gojobs.go.kr/apmList.do?menuNo=401&mngrMenuYn=N&selMenuNo=400&upperMenuNo=&searchKeyword={keyword}&pageIndex={page}",
+    "firstPage": 1,
+    "pageSize": 10,
+    "maxPages": 60,
+    "requestDelayMs": 1500,
+    "params": []
+  },
+  "extract": {
+    "kind": "html-selectors",
+    "readySelector": "#apmTbl",
+    "itemSelector": "#apmTbl tbody tr",
+    "emptyItemSelector": "td.emptyRow",
+    "totalCountSelector": ".mrtp50 .left span:first-child",
+    "fields": {
+      "externalId": {
+        "selector": "td:nth-child(2) a",
+        "attr": "href",
+        "pattern": "fn_apmView\\([^,]+,\\s*'(\\d+)'\\)"
+      },
+      "title": { "selector": "td:nth-child(2) a" },
+      "company": { "selector": "td:nth-child(3)" },
+      "postedAt": { "selector": "td:nth-child(4)" },
+      "deadline": { "selector": "td:nth-child(5)" }
+    },
+    "inferLocationFromCompany": true
+  },
+  "postingUrlTemplate": "https://www.gojobs.go.kr/apmView.do?menuNo=401&mngrMenuYn=N&selMenuNo=400&upperMenuNo=&empmnsn={id}"
+}

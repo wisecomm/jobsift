@@ -1,4 +1,4 @@
-import type { PostingKey, PostingPatch, StoredPosting } from '../shared/types'
+import { postingSources, type PostingKey, type PostingPatch, type StoredPosting } from '../shared/types'
 import { careerLabel } from '../shared/career'
 import { deadlineLabel, formatDate, locationSummary } from './format'
 import { MemoField } from './MemoField'
@@ -14,6 +14,7 @@ interface Props {
 export function PostingCard({ posting: p, now, onUpdate }: Props) {
   const deadline = deadlineLabel(p.deadline, now)
   const key = { site: p.site, externalId: p.externalId }
+  const sources = postingSources(p)
   return (
     <li className={`card status-${p.status}`}>
       {p.score !== null && (
@@ -30,7 +31,18 @@ export function PostingCard({ posting: p, now, onUpdate }: Props) {
         </h3>
         <p className="company">
           {p.company}
-          <span className="site">{siteName(p.site)}</span>
+          <span className="site">
+            {sources.length === 1
+              ? siteName(p.site)
+              : sources.map((source, index) => (
+                  <span key={`${source.site}:${source.externalId}`}>
+                    {index > 0 && ' · '}
+                    <a href={source.url} target="_blank" rel="noreferrer">
+                      {siteName(source.site)}
+                    </a>
+                  </span>
+                ))}
+          </span>
           {p.status !== 'new' && <span className="state">{STATUS_LABEL[p.status]}</span>}
         </p>
         <dl className="facts">

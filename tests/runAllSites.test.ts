@@ -10,7 +10,8 @@ import { adapter as first, criteria, fakePage, freshStore, posting, type FakeIte
 const second = parseAdapter(secondJson)
 const NOW = new Date('2026-11-13T20:00:00+09:00')
 const hoursAgo = (h: number) => new Date(NOW.getTime() - h * 3600_000).toISOString()
-const items = (ids: number[]): FakeItem[] => ids.map((n) => ({ id: String(n), createdAt: hoursAgo(n) }))
+const items = (ids: number[], companyPrefix = '회사'): FakeItem[] =>
+  ids.map((n) => ({ id: String(n), createdAt: hoursAgo(n), company: `${companyPrefix} ${n}` }))
 
 /** Serves each host its own pages and records which hosts were asked. */
 function web(pages: Record<string, FakeItem[]>, failingHosts: string[] = []) {
@@ -54,7 +55,7 @@ const waiting = (site: string, id: number): PendingPosting => ({
 describe('runAllSites', () => {
   it('fetches only the sites it is given, and keeps ids per site', async () => {
     const store = await freshStore()
-    const w = web({ [JK]: items([1, 2]), [SECOND]: items([1, 3]) })
+    const w = web({ [JK]: items([1, 2], '잡코'), [SECOND]: items([1, 3], '세컨드') })
 
     const onlySecond = await runAllSites([second], criteria(), store, w.deps)
     expect(new Set(w.hosts)).toEqual(new Set([SECOND]))
@@ -68,7 +69,7 @@ describe('runAllSites', () => {
 
   it('records an ok summary per site with the run time', async () => {
     const store = await freshStore()
-    const report = await runAllSites([first, second], criteria(), store, web({ [JK]: items([1]), [SECOND]: items([1, 2]) }).deps)
+    const report = await runAllSites([first, second], criteria(), store, web({ [JK]: items([1], '잡코'), [SECOND]: items([1, 2], '세컨드') }).deps)
     expect(report.scoring).toBeNull()
     expect(report.runs.map((r) => [r.site, r.at, r.result.kind === 'ok' ? r.result.summary.saved : null])).toEqual([
       ['jobkorea', NOW.toISOString(), 1],
@@ -168,5 +169,101 @@ describe('applyCriteriaChange across sites', () => {
     expect((await store.listPostings()).map((p) => `${p.site}:${p.externalId}`)).toEqual(['second:c'])
     expect((await store.listDiscards('jobkorea')).map((d) => d.externalId)).toEqual(['a'])
     expect((await store.listDiscards('second')).map((d) => d.externalId).sort()).toEqual(['4', 'b'])
+  })
+
+  it('writes discard records for all sites on a grouped posting', async () => {
+    const store = await freshStore()
+    await store.putPosting(
+      stored('jobkorea', 'a', {
+        locations: ['부산>해운대구'],
+        alsoOn: [{ site: 'second', externalId: 's1', url: 'https://second.example.test/s1' }],
+      }),
+    )
+
+    const { removed } = await applyCriteriaChange(store, criteria({ locations: ['서울'] }), { aiOn: false }, NOW)
+
+    expect(removed).toBe(1)
+    expect(await store.listPostings()).toEqual([])
+    expect((await store.listDiscards('jobkorea')).map((d) => d.externalId)).toEqual(['a'])
+    expect((await store.listDiscards('second')).map((d) => d.externalId)).toEqual(['s1'])
+  })
+})
+
+describe('cross-site duplicate grouping (Q31)', () => {
+  it('merges matching postings in rules mode without duplicating cards or losing status', async () => {
+    const store = await freshStore()
+    const jkItems: FakeItem[] = [{ id: '10', createdAt: hoursAgo(1), title: '전산 백엔드 개발', company: '(주)테스트' }]
+    const secondItems: FakeItem[] = [{ id: '99', createdAt: hoursAgo(2), title: '전산 백엔드 개발', company: '주식회사 테스트' }]
+
+    await runAllSites([first, second], criteria(), store, web({ [JK]: jkItems, [SECOND]: secondItems }).deps)
+
+    const postings = await store.listPostings()
+    expect(postings).toHaveLength(1)
+    expect(postings[0]).toMatchObject({
+      site: 'jobkorea',
+      externalId: '10',
+      alsoOn: [{ site: 'second', externalId: '99', url: 'https://second.test/jobs/99' }],
+    })
+    expect((await store.knownIds('second')).has('99')).toBe(true)
+
+    await store.updatePosting({ site: 'jobkorea', externalId: '10' }, { status: 'saved', memo: '메모 유지' }, NOW)
+    await runAllSites([first, second], criteria(), store, web({ [JK]: jkItems, [SECOND]: secondItems }).deps)
+    expect(await store.listPostings()).toHaveLength(1)
+    expect((await store.listPostings())[0]).toMatchObject({ status: 'saved', memo: '메모 유지' })
+  })
+
+  it('keeps postings in different locations separate', async () => {
+    const store = await freshStore()
+    const jkItems: FakeItem[] = [{ id: '10', createdAt: hoursAgo(1), title: '전산 백엔드 개발', company: '테스트', areas: ['I010'] }]
+    const secondItems: FakeItem[] = [{ id: '99', createdAt: hoursAgo(2), title: '전산 백엔드 개발', company: '테스트', areas: ['B010'] }]
+
+    await runAllSites([first, second], criteria({ locations: ['서울', '경기'] }), store, web({ [JK]: jkItems, [SECOND]: secondItems }).deps)
+
+    expect(await store.listPostings()).toHaveLength(2)
+  })
+
+  it('scores duplicate pending posting once in AI mode and discards all sites when below minScore', async () => {
+    const store = await freshStore()
+    const jkItems: FakeItem[] = [{ id: '10', createdAt: hoursAgo(1), title: '50 점 공고', company: '테스트' }]
+    const secondItems: FakeItem[] = [{ id: '99', createdAt: hoursAgo(2), title: '50 점 공고', company: '테스트' }]
+    const batches: number[] = []
+    const scoring = {
+      minScore: 60,
+      now: NOW,
+      pace: async () => {},
+      score: async (batch: ScoreItem[]) => {
+        batches.push(batch.length)
+        return { kind: 'ok' as const, scores: batch.map((i) => ({ index: i.index, score: 50, reason: '낮음' })) }
+      },
+    }
+
+    const report = await runAllSites([first, second], criteria(), store, { ...web({ [JK]: jkItems, [SECOND]: secondItems }).deps, scoring })
+
+    expect(batches).toEqual([1])
+    expect(report.scoring).toMatchObject({ scored: 1, kept: 0, lowScore: 1 })
+    expect(await store.listPostings()).toEqual([])
+    expect((await store.listDiscards('jobkorea')).map((d) => d.externalId)).toEqual(['10'])
+    expect((await store.listDiscards('second')).map((d) => d.externalId)).toEqual(['99'])
+  })
+
+  it('preserves alsoOn when AI keeps a grouped pending posting', async () => {
+    const store = await freshStore()
+    const jkItems: FakeItem[] = [{ id: '10', createdAt: hoursAgo(1), title: '90 점 공고', company: '테스트' }]
+    const secondItems: FakeItem[] = [{ id: '99', createdAt: hoursAgo(2), title: '90 점 공고', company: '테스트' }]
+    const scoring = {
+      minScore: 60,
+      now: NOW,
+      pace: async () => {},
+      score: async (batch: ScoreItem[]) => ({
+        kind: 'ok' as const,
+        scores: batch.map((i) => ({ index: i.index, score: 90, reason: '적합' })),
+      }),
+    }
+
+    await runAllSites([first, second], criteria(), store, { ...web({ [JK]: jkItems, [SECOND]: secondItems }).deps, scoring })
+
+    const postings = await store.listPostings()
+    expect(postings).toHaveLength(1)
+    expect(postings[0]?.alsoOn).toEqual([{ site: 'second', externalId: '99', url: 'https://second.test/jobs/99' }])
   })
 })

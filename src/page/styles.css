@@ -105,6 +105,8 @@ input, select, textarea {
 .card h3 a:hover { color: var(--accent); text-decoration: underline; }
 .company { margin: 0 0 6px; color: var(--muted); }
 .site, .state { margin-left: 8px; font-size: 12px; border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; }
+.site a { color: var(--accent); text-decoration: none; }
+.site a:hover { text-decoration: underline; }
 .state { border-color: var(--accent); color: var(--accent); }
 .facts { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0 0 6px; font-size: 14px; }
 .facts div { display: flex; gap: 6px; }

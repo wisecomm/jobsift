@@ -1,5 +1,5 @@
 import type { Store } from '../storage/store'
-import type { PendingPosting, SearchCriteria, StoredPosting } from '../shared/types'
+import { postingSources, type PendingPosting, type SearchCriteria, type StoredPosting } from '../shared/types'
 import { evaluate } from './evaluate'
 
 export interface ChangeResult {
@@ -46,7 +46,11 @@ export async function applyCriteriaChange(
   const waiting = await store.listPending()
 
   const reject = async (posting: StoredPosting | PendingPosting, reason: Extract<ReturnType<typeof evaluate>, { kind: 'reject' }>['reason']) => {
-    await store.putDiscard({ site: posting.site, externalId: posting.externalId, reason, discardedAt: nowIso, deadline: posting.deadline })
+    await Promise.all(
+      postingSources(posting).map((source) =>
+        store.putDiscard({ site: source.site, externalId: source.externalId, reason, discardedAt: nowIso, deadline: posting.deadline }),
+      ),
+    )
     result.removed++
   }
 

@@ -1,10 +1,5 @@
+import { KST_OFFSET_MS, kstDay } from '../shared/date'
 import type { CollectionReport, CollectionSummary, ScoringSummary, SiteRunStatus } from '../shared/types'
-
-const KST_OFFSET_MS = 9 * 60 * 60 * 1000
-const DAY_MS = 24 * 60 * 60 * 1000
-
-// Dates are shown in Korean time whatever the machine's zone, so "D-day" means what the posting site means.
-const kstDay = (ms: number) => Math.floor((ms + KST_OFFSET_MS) / DAY_MS)
 
 export function formatDate(iso: string): string {
   return new Date(Date.parse(iso) + KST_OFFSET_MS).toISOString().slice(0, 10)

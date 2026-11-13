@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { NextFlightQueryExtract, SiteAdapter } from '../adapter/schema'
 import type { Career, JobPosting } from '../shared/types'
 import { findDehydratedQuery, readFlightPayload } from './flight'
+import { extractHtmlPage } from './htmlExtract'
 import { getPath } from './path'
 
 const rawPosting = z.object({
@@ -50,9 +51,12 @@ function toDeadline(extract: NextFlightQueryExtract, value: string | null | unde
 export interface ExtractedPage {
   postings: JobPosting[]
   totalPages: number | null
+  /** Ids whose displayed date is an edit date rather than original posting date (so a bumped known item does not cut off newer ones). */
+  modifiedIds?: ReadonlySet<string>
 }
 
 export function extractPage(adapter: SiteAdapter, html: string): ExtractedPage {
+  if (adapter.extract.kind === 'html-selectors') return extractHtmlPage(adapter, adapter.extract, html)
   const { extract } = adapter
   const payload = readFlightPayload(html)
   const query = requireQuery(payload, extract.queryKey, adapter.id)

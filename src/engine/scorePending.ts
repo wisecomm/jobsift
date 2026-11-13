@@ -2,7 +2,7 @@ import { toScoreItems } from '../ai/prompt'
 import { BATCH_SIZE } from '../ai/constants'
 import { aiErrorMessage } from '../ai/gemini'
 import type { AiError, ScoreFn } from '../ai/types'
-import type { DiscardRecord, PendingPosting, ScoringSummary, StoredPosting } from '../shared/types'
+import { postingSources, type DiscardRecord, type PendingPosting, type ScoringSummary, type StoredPosting } from '../shared/types'
 import type { Store } from '../storage/store'
 
 export interface ScoringDeps {
@@ -44,18 +44,28 @@ export async function scorePending(store: Store, { score, pace, minScore, now }:
 
     const kept: StoredPosting[] = []
     const dropped: DiscardRecord[] = []
+    let lowScoreCount = 0
     for (const { index, score: value, reason } of result.scores) {
       const { matchedKeywords, queuedAt, ...posting } = batch[index] as PendingPosting
       if (value >= minScore) {
         kept.push({ ...posting, matchedKeywords, status: 'new', memo: '', score: value, scoreReason: reason, collectedAt: queuedAt, updatedAt: nowIso })
       } else {
-        dropped.push({ site: posting.site, externalId: posting.externalId, reason: { gate: 'lowScore', score: value }, discardedAt: nowIso, deadline: posting.deadline })
+        lowScoreCount++
+        for (const source of postingSources(posting)) {
+          dropped.push({
+            site: source.site,
+            externalId: source.externalId,
+            reason: { gate: 'lowScore', score: value },
+            discardedAt: nowIso,
+            deadline: posting.deadline,
+          })
+        }
       }
     }
     await store.commitScored({ kept, dropped, resolved: batch })
     pass.scored += batch.length
     pass.kept += kept.length
-    pass.lowScore += dropped.length
+    pass.lowScore += lowScoreCount
     pass.pendingLeft -= batch.length
   }
   return pass

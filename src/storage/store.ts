@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { CollectState, DiscardRecord, PendingPosting, PostingKey, PostingPatch, StoredPosting, UpdateResult } from '../shared/types'
+import { postingSources, type CollectState, type DiscardRecord, type PendingPosting, type PostingKey, type PostingPatch, type StoredPosting, type UpdateResult } from '../shared/types'
 
 export interface Store {
   /** Every site's postings when `site` is omitted. */
@@ -91,7 +91,8 @@ export async function openStore(name = DB_NAME): Promise<Store> {
     async markExpired(site, now) {
       const tx = db.transaction('postings', 'readwrite')
       let marked = 0
-      for (const posting of await tx.store.getAll(siteRange(site))) {
+      for (const posting of await tx.store.getAll()) {
+        if (!postingSources(posting).some((s) => s.site === site)) continue
         const open = posting.status === 'new' || posting.status === 'saved'
         if (!open || posting.deadline === null || Date.parse(posting.deadline) >= now.getTime()) continue
         await tx.store.put({ ...posting, status: 'expired', updatedAt: now.toISOString() })
@@ -130,11 +131,17 @@ export async function openStore(name = DB_NAME): Promise<Store> {
 
     async knownIds(site) {
       const [postings, discards, pending] = await Promise.all([
-        db.getAllKeys('postings', siteRange(site)),
+        db.getAll('postings'),
         db.getAllKeys('discards', siteRange(site)),
-        db.getAllKeys('pending', siteRange(site)),
+        db.getAll('pending'),
       ])
-      return new Set([...postings, ...discards, ...pending].map(([, externalId]) => externalId))
+      const ids = new Set<string>(discards.map(([, externalId]) => externalId))
+      for (const record of [...postings, ...pending]) {
+        for (const source of postingSources(record)) {
+          if (source.site === site) ids.add(source.externalId)
+        }
+      }
+      return ids
     },
 
     getCollectState: (site, keyword) => db.get('collectState', [site, keyword]),

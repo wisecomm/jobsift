@@ -1,4 +1,4 @@
-import type { PostingStatus, StoredPosting } from '../shared/types'
+import { postingSources, type PostingStatus, type StoredPosting } from '../shared/types'
 
 export const PAGE_SIZE = 10
 
@@ -32,7 +32,7 @@ const CAREER_KINDS: Record<Exclude<CareerOption, 'all'>, ReadonlySet<string>> = 
 }
 
 function matchesFilters(p: StoredPosting, { site, career, query }: ListView): boolean {
-  if (site !== 'all' && p.site !== site) return false
+  if (site !== 'all' && !postingSources(p).some((s) => s.site === site)) return false
   if (career !== 'all' && !CAREER_KINDS[career].has(p.career.kind)) return false
   const needle = query.trim().toLowerCase()
   return needle === '' || p.title.toLowerCase().includes(needle) || p.company.toLowerCase().includes(needle)

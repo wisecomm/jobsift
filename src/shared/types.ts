@@ -53,6 +53,12 @@ export type RejectGate = RejectReason['gate']
 
 export type Evaluation = { kind: 'pass'; matchedKeywords: string[] } | { kind: 'reject'; reason: RejectReason }
 
+export interface PostingSource {
+  site: string
+  externalId: string
+  url: string
+}
+
 export interface StoredPosting extends JobPosting {
   status: PostingStatus
   memo: string
@@ -61,13 +67,21 @@ export interface StoredPosting extends JobPosting {
   scoreReason: string | null
   collectedAt: string
   updatedAt: string
+  /** Other sites where the same posting was collected (Q31). */
+  alsoOn?: PostingSource[]
 }
 
 /** Passed the rules and waits for an AI score. Becomes a StoredPosting or a DiscardRecord once scored. */
 export interface PendingPosting extends JobPosting {
   matchedKeywords: string[]
   queuedAt: string
+  /** Other sites where the same posting was collected (Q31). */
+  alsoOn?: PostingSource[]
 }
+
+export const postingSources = (
+  p: Pick<JobPosting, 'site' | 'externalId' | 'url'> & { alsoOn?: readonly PostingSource[] },
+): PostingSource[] => [{ site: p.site, externalId: p.externalId, url: p.url }, ...(p.alsoOn ?? [])]
 
 /** Identity only, on purpose: a discarded posting keeps no title, company or url. */
 export interface DiscardRecord {

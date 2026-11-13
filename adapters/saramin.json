@@ -1,0 +1,45 @@
+{
+  "id": "saramin",
+  "name": "사람인",
+  "homeUrl": "https://www.saramin.co.kr",
+  "requiresLogin": false,
+  "postedAtPrecision": "date",
+  "version": 1,
+  "search": {
+    "urlTemplate": "https://www.saramin.co.kr/zf_user/search/recruit?searchword={keyword}&recruitSort=reg_dt&recruitPage={page}&recruitPageCount=40",
+    "firstPage": 1,
+    "pageSize": 40,
+    "maxPages": 30,
+    "requestDelayMs": 1500,
+    "params": [
+      {
+        "criterion": "career",
+        "query": "exp_cd",
+        "values": { "any": null, "new": "1", "experienced": "2" }
+      },
+      {
+        "criterion": "career",
+        "query": "exp_none",
+        "values": { "any": null, "new": "y", "experienced": "y" }
+      }
+    ]
+  },
+  "extract": {
+    "kind": "html-selectors",
+    "readySelector": "#recruit_info, .info_no_result",
+    "itemSelector": "#recruit_info_list .item_recruit",
+    "totalCountSelector": "#recruit_info .cnt_result",
+    "fields": {
+      "externalId": { "attr": "value" },
+      "title": { "selector": ".job_tit a" },
+      "company": { "selector": ".corp_name" },
+      "postedAt": { "selector": ".job_day" },
+      "deadline": { "selector": ".job_date .date" }
+    },
+    "modifiedMarker": "수정일",
+    "locationPartsSelector": ".job_condition > span:first-child a",
+    "careerSelector": ".job_condition > span:nth-child(2)",
+    "jobTagsSelector": ".job_sector a"
+  },
+  "postingUrlTemplate": "https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx={id}"
+}
