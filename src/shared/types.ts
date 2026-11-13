@@ -47,6 +47,7 @@ export type RejectReason =
   | { gate: 'keywordMismatch' }
   | { gate: 'location' }
   | { gate: 'career' }
+  | { gate: 'lowScore'; score: number }
 
 export type RejectGate = RejectReason['gate']
 
@@ -60,6 +61,12 @@ export interface StoredPosting extends JobPosting {
   scoreReason: string | null
   collectedAt: string
   updatedAt: string
+}
+
+/** Passed the rules and waits for an AI score. Becomes a StoredPosting or a DiscardRecord once scored. */
+export interface PendingPosting extends JobPosting {
+  matchedKeywords: string[]
+  queuedAt: string
 }
 
 /** Identity only, on purpose: a discarded posting keeps no title, company or url. */
@@ -81,9 +88,36 @@ export type PostingKey = Pick<JobPosting, 'site' | 'externalId'>
 
 export type StopReason = 'cutoff' | 'known' | 'exhausted' | 'page-cap' | 'error'
 
+export interface AiSettings {
+  apiKey: string
+  model: string
+  /** 0 to 100. */
+  minScore: number
+}
+
+/** What the page may see: never the key itself. */
+export interface AiSettingsView {
+  hasKey: boolean
+  model: string
+  minScore: number
+}
+
+export interface ScoringSummary {
+  scored: number
+  kept: number
+  lowScore: number
+  pendingLeft: number
+  /** Korean message for the batch that stopped the pass, if one did. */
+  error: string | null
+}
+
 export interface CollectionSummary {
   scanned: number
   saved: number
+  /** Postings sent to the scoring queue instead of being stored (AI on). */
+  queued: number
+  /** `null` in rules-only mode. */
+  scoring: ScoringSummary | null
   discarded: number
   discardedByGate: Record<RejectGate, number>
   expiredMarked: number

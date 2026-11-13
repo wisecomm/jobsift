@@ -1,4 +1,4 @@
-import type { Career, CollectionSummary } from '../shared/types'
+import type { CollectionSummary } from '../shared/types'
 
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -8,21 +8,6 @@ const kstDay = (ms: number) => Math.floor((ms + KST_OFFSET_MS) / DAY_MS)
 
 export function formatDate(iso: string): string {
   return new Date(Date.parse(iso) + KST_OFFSET_MS).toISOString().slice(0, 10)
-}
-
-export function careerLabel(career: Career): string {
-  switch (career.kind) {
-    case 'new':
-      return '신입'
-    case 'any':
-      return '경력무관'
-    case 'experienced':
-      return career.minYears ? `경력 ${career.minYears}년↑` : '경력'
-    case 'newOrExperienced':
-      return career.minYears ? `신입·경력 ${career.minYears}년↑` : '신입·경력'
-    case 'unknown':
-      return '경력 정보 없음'
-  }
 }
 
 export interface DeadlineLabel {

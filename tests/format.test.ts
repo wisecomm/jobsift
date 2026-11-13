@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { careerLabel, deadlineLabel, locationSummary, stopNotices } from '../src/page/format'
+import { careerLabel } from '../src/shared/career'
+import { deadlineLabel, locationSummary, stopNotices } from '../src/page/format'
 import { SAMPLE_DESCRIPTIONS } from '../src/page/sampleDescriptions'
 import type { CollectionSummary } from '../src/shared/types'
 
@@ -49,8 +50,8 @@ describe('locationSummary', () => {
 
 describe('stopNotices', () => {
   const summary = (over: Partial<CollectionSummary>): CollectionSummary => ({
-    scanned: 0, saved: 0, discarded: 0, expiredMarked: 0, errors: {}, stopReasons: {},
-    discardedByGate: { expired: 0, excludeKeyword: 0, keywordMismatch: 0, location: 0, career: 0 },
+    scanned: 0, saved: 0, queued: 0, scoring: null, discarded: 0, expiredMarked: 0, errors: {}, stopReasons: {},
+    discardedByGate: { expired: 0, excludeKeyword: 0, keywordMismatch: 0, location: 0, career: 0, lowScore: 0 },
     ...over,
   })
 

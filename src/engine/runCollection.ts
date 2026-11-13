@@ -19,6 +19,7 @@ export const emptyGateCounts = (): Record<RejectGate, number> => ({
   keywordMismatch: 0,
   location: 0,
   career: 0,
+  lowScore: 0,
 })
 
 async function pruneDiscards(store: Store, site: string, now: Date): Promise<void> {
@@ -59,6 +60,8 @@ export async function runCollection(
   const summary: CollectionSummary = {
     scanned: postings.length,
     saved: 0,
+    queued: 0,
+    scoring: null,
     discarded: 0,
     discardedByGate: emptyGateCounts(),
     expiredMarked,

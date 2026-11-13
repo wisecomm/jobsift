@@ -1,5 +1,6 @@
 import type { PostingKey, PostingPatch, StoredPosting } from '../shared/types'
-import { careerLabel, deadlineLabel, formatDate, locationSummary } from './format'
+import { careerLabel } from '../shared/career'
+import { deadlineLabel, formatDate, locationSummary } from './format'
 import { MemoField } from './MemoField'
 import { siteName } from './sites'
 import { STATUS_LABEL, actionsFor } from './statuses'

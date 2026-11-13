@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { CollectState, DiscardRecord, PostingKey, PostingPatch, StoredPosting, UpdateResult } from '../shared/types'
+import type { CollectState, DiscardRecord, PendingPosting, PostingKey, PostingPatch, StoredPosting, UpdateResult } from '../shared/types'
 
 export interface Store {
   listPostings(site: string): Promise<StoredPosting[]>
@@ -17,7 +17,13 @@ export interface Store {
   putDiscard(record: DiscardRecord): Promise<void>
   deleteDiscards(keys: PostingKey[]): Promise<void>
 
-  /** Ids of every posting and discard for the site. */
+  listPending(site: string): Promise<PendingPosting[]>
+  putPending(posting: PendingPosting): Promise<void>
+  deletePending(keys: PostingKey[]): Promise<void>
+  /** Resolves scored pending postings in one transaction, so an interruption never leaves one both queued and stored, or neither. */
+  commitScored(outcome: { kept: StoredPosting[]; dropped: DiscardRecord[]; resolved: PostingKey[] }): Promise<void>
+
+  /** Ids of every posting, discard and pending posting for the site. */
   knownIds(site: string): Promise<Set<string>>
 
   getCollectState(site: string, keyword: string): Promise<CollectState | undefined>
@@ -31,20 +37,25 @@ export interface Store {
 interface Schema extends DBSchema {
   postings: { key: [string, string]; value: StoredPosting }
   discards: { key: [string, string]; value: DiscardRecord }
+  pending: { key: [string, string]; value: PendingPosting }
   collectState: { key: [string, string]; value: CollectState }
 }
 
 const DB_NAME = 'kr-job-finder'
+const DB_VERSION = 2
 
 const siteRange = (site: string) => IDBKeyRange.bound([site], [site, []])
 const keyOf = ({ site, externalId }: PostingKey): [string, string] => [site, externalId]
 
 export async function openStore(name = DB_NAME): Promise<Store> {
-  const db: IDBPDatabase<Schema> = await openDB<Schema>(name, 1, {
-    upgrade(database) {
-      database.createObjectStore('postings', { keyPath: ['site', 'externalId'] })
-      database.createObjectStore('discards', { keyPath: ['site', 'externalId'] })
-      database.createObjectStore('collectState', { keyPath: ['site', 'keyword'] })
+  const db: IDBPDatabase<Schema> = await openDB<Schema>(name, DB_VERSION, {
+    upgrade(database, oldVersion) {
+      if (oldVersion < 1) {
+        database.createObjectStore('postings', { keyPath: ['site', 'externalId'] })
+        database.createObjectStore('discards', { keyPath: ['site', 'externalId'] })
+        database.createObjectStore('collectState', { keyPath: ['site', 'keyword'] })
+      }
+      if (oldVersion < 2) database.createObjectStore('pending', { keyPath: ['site', 'externalId'] })
     },
   })
 
@@ -97,12 +108,31 @@ export async function openStore(name = DB_NAME): Promise<Store> {
       await Promise.all([...keys.map((key) => tx.store.delete(keyOf(key))), tx.done])
     },
 
+    listPending: (site) => db.getAll('pending', siteRange(site)),
+    putPending: async (posting) => void (await db.put('pending', posting)),
+    async deletePending(keys) {
+      const tx = db.transaction('pending', 'readwrite')
+      await Promise.all([...keys.map((key) => tx.store.delete(keyOf(key))), tx.done])
+    },
+    async commitScored({ kept, dropped, resolved }) {
+      const tx = db.transaction(['postings', 'discards', 'pending'], 'readwrite')
+      await Promise.all([
+        ...kept.map((posting) => tx.objectStore('postings').put(posting)),
+        ...dropped.map(({ site, externalId, reason, discardedAt, deadline }) =>
+          tx.objectStore('discards').put({ site, externalId, reason, discardedAt, deadline }),
+        ),
+        ...resolved.map((key) => tx.objectStore('pending').delete(keyOf(key))),
+        tx.done,
+      ])
+    },
+
     async knownIds(site) {
-      const [postings, discards] = await Promise.all([
+      const [postings, discards, pending] = await Promise.all([
         db.getAllKeys('postings', siteRange(site)),
         db.getAllKeys('discards', siteRange(site)),
+        db.getAllKeys('pending', siteRange(site)),
       ])
-      return new Set([...postings, ...discards].map(([, externalId]) => externalId))
+      return new Set([...postings, ...discards, ...pending].map(([, externalId]) => externalId))
     },
 
     getCollectState: (site, keyword) => db.get('collectState', [site, keyword]),
@@ -111,8 +141,14 @@ export async function openStore(name = DB_NAME): Promise<Store> {
     clearDiscards: () => db.clear('discards'),
     clearCollectState: () => db.clear('collectState'),
     async clearAll() {
-      const tx = db.transaction(['postings', 'discards', 'collectState'], 'readwrite')
-      await Promise.all([tx.objectStore('postings').clear(), tx.objectStore('discards').clear(), tx.objectStore('collectState').clear(), tx.done])
+      const tx = db.transaction(['postings', 'discards', 'collectState', 'pending'], 'readwrite')
+      await Promise.all([
+        tx.objectStore('postings').clear(),
+        tx.objectStore('discards').clear(),
+        tx.objectStore('collectState').clear(),
+        tx.objectStore('pending').clear(),
+        tx.done,
+      ])
     },
   }
 }
