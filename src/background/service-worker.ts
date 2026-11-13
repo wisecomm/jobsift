@@ -48,7 +48,7 @@ async function handle(request: Request): Promise<ResponseData[Request['type']]> 
         const next = normalizeCriteria(request.criteria)
         const changed = criteriaChanged(await readCriteria(), next)
         // Cleanup runs before persisting so an interrupted cleanup is redone by the next save, which still sees a change.
-        const removed = changed ? (await applyCriteriaChange(await storePromise, adapter.id, next, new Date())).removed : 0
+        const removed = changed ? (await applyCriteriaChange(await storePromise, adapter.id, next, { aiOn: false }, new Date())).removed : 0
         await chrome.storage.local.set({ [CRITERIA_KEY]: next })
         return { changed, removed }
       })

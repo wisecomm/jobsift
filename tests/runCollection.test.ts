@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { runCollection } from '../src/engine/runCollection'
+import type { ScoreFn, ScoreItem } from '../src/ai/types'
 import type { DiscardRecord, StoredPosting } from '../src/shared/types'
 import { adapter, criteria, fakePage, freshStore, posting, type FakeItem } from './helpers'
 
@@ -171,5 +172,104 @@ describe('runCollection', () => {
     await runCollection(adapter, criteria(), store, s.deps(NOW))
 
     expect((await store.listDiscards('jobkorea')).map((d) => d.externalId).sort()).toEqual(['future', 'recent'])
+  })
+})
+
+describe('runCollection with AI on', () => {
+  const posts = (ids: number[]): FakeItem[] =>
+    ids.map((n) => ({ id: String(n), createdAt: hoursAgo(n), title: n % 2 === 0 ? `공고 ${n}` : `전산 공고 ${n}` }))
+
+  /** Score = the number in the title, so ids pick the outcome. */
+  function ai(log: string[], failOnCall = 0, minScore = 5) {
+    let calls = 0
+    const score: ScoreFn = async (items: ScoreItem[]) => {
+      calls++
+      log.push(`score#${calls}(${items.length})`)
+      if (calls === failOnCall) return { kind: 'error', error: { kind: 'rateLimited' } }
+      return { kind: 'ok', scores: items.map((i) => ({ index: i.index, score: Number(/\d+/.exec(i.title)?.[0]), reason: '이유' })) }
+    }
+    return { score, minScore, now: NOW, pace: async () => void log.push('pace') }
+  }
+
+  it('turns the keyword gate off, queues passes, and scores them after fetching', async () => {
+    const store = await freshStore()
+    const log: string[] = []
+    const s = site({ [pageUrl('전산')]: fakePage(posts([1, 2, 3, 4, 5, 6, 7, 8]), 1) })
+
+    const summary = await runCollection(adapter, criteria({ locations: ['서울'] }), store, { ...s.deps(NOW), scoring: ai(log) })
+
+    expect(summary).toMatchObject({
+      scanned: 8,
+      saved: 0,
+      queued: 8,
+      discarded: 0,
+      scoring: { scored: 8, kept: 4, lowScore: 4, pendingLeft: 0, error: null },
+    })
+    expect((await store.listPostings('jobkorea')).map((p) => p.score).sort()).toEqual([5, 6, 7, 8])
+    expect((await store.listDiscards('jobkorea')).filter((d) => d.reason.gate === 'lowScore')).toHaveLength(4)
+    expect(log).toEqual(['pace', 'score#1(8)'])
+  })
+
+  it('still applies the non-keyword rules before queueing', async () => {
+    const store = await freshStore()
+    const s = site({ [pageUrl('전산')]: fakePage(mixedItems, 1) })
+    const summary = await runCollection(adapter, rules, store, { ...s.deps(NOW), scoring: ai([], 0, 0) })
+    expect(summary.discardedByGate).toMatchObject({ keywordMismatch: 0, excludeKeyword: 1, location: 1, career: 1, expired: 1 })
+    expect(summary.queued).toBe(2)
+  })
+
+  it('drains pending before fetching and treats pending ids as known', async () => {
+    const store = await freshStore()
+    await store.putPending({ ...posting({ externalId: '9', title: '공고 9' }), matchedKeywords: [], queuedAt: '2026-11-13T00:00:00Z' })
+    const log: string[] = []
+    const fetching: string[] = []
+    const s = site({ [pageUrl('전산')]: fakePage(posts([9, 10]), 1) })
+    const deps = s.deps(NOW)
+    const summary = await runCollection(adapter, criteria(), store, {
+      ...deps,
+      fetchHtml: async (url) => {
+        log.push('fetch')
+        fetching.push(url)
+        return deps.fetchHtml(url)
+      },
+      scoring: ai(log, 0, 0),
+    })
+
+    expect(log).toEqual(['pace', 'score#1(1)', 'fetch', 'pace', 'score#2(1)'])
+    expect(summary.scanned).toBe(1)
+    expect(summary.scoring).toMatchObject({ scored: 2, kept: 2 })
+    expect((await store.listPostings('jobkorea')).map((p) => p.externalId).sort()).toEqual(['10', '9'])
+  })
+
+  it('on a failed pass, still collects, queues the new postings, and reports the Korean error', async () => {
+    const store = await freshStore()
+    await store.putPending({ ...posting({ externalId: '9', title: '공고 9' }), matchedKeywords: [], queuedAt: '2026-11-13T00:00:00Z' })
+    const log: string[] = []
+    const s = site({ [pageUrl('전산')]: fakePage(posts([10, 12]), 1) })
+
+    const summary = await runCollection(adapter, criteria(), store, { ...s.deps(NOW), scoring: ai(log, 1) })
+
+    expect(log).toEqual(['pace', 'score#1(1)'])
+    expect(summary.queued).toBe(2)
+    expect(summary.scoring).toMatchObject({ scored: 0, pendingLeft: 3 })
+    expect(summary.scoring?.error).toMatch(/한도/)
+    expect(await store.listPostings('jobkorea')).toEqual([])
+  })
+
+  it('does not fetch or evaluate a queued posting twice', async () => {
+    const store = await freshStore()
+    const s = site({ [pageUrl('전산')]: fakePage(posts([10]), 1) })
+    await runCollection(adapter, criteria(), store, { ...s.deps(NOW), scoring: ai([], 1) })
+    const again = await runCollection(adapter, criteria(), store, { ...s.deps(new Date(NOW.getTime() + 60_000)), scoring: ai([], 1) })
+    expect(again.scanned).toBe(0)
+    expect(again.scoring?.pendingLeft).toBe(1)
+  })
+
+  it('rules-only mode reports no scoring and queues nothing', async () => {
+    const store = await freshStore()
+    const s = site({ [pageUrl('전산')]: fakePage(mixedItems, 1) })
+    const summary = await runCollection(adapter, rules, store, s.deps(NOW))
+    expect(summary).toMatchObject({ scoring: null, queued: 0, saved: 1 })
+    expect(await store.listPending('jobkorea')).toEqual([])
   })
 })
