@@ -6,7 +6,7 @@
     "urlTemplate": "https://www.jobkorea.co.kr/Search/?stext={keyword}&tabType=recruit&ord=RegDtDesc&Page_No={page}",
     "firstPage": 1,
     "pageSize": 20,
-    "maxPages": 10,
+    "maxPages": 60,
     "requestDelayMs": 1500,
     "params": [
       {
