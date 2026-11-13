@@ -1,6 +1,8 @@
 {
   "id": "jobkorea",
   "name": "잡코리아",
+  "homeUrl": "https://www.jobkorea.co.kr",
+  "requiresLogin": false,
   "version": 1,
   "search": {
     "urlTemplate": "https://www.jobkorea.co.kr/Search/?stext={keyword}&tabType=recruit&ord=RegDtDesc&Page_No={page}",

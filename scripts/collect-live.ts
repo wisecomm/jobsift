@@ -1,5 +1,4 @@
-import jobkoreaJson from '../adapters/jobkorea.json'
-import { parseAdapter } from '../src/adapter/schema'
+import { getAdapter } from '../src/adapter/registry'
 import { collect } from '../src/engine/collect'
 
 const USER_AGENT =
@@ -12,7 +11,7 @@ if (!keyword) {
   process.exit(1)
 }
 
-const adapter = parseAdapter(jobkoreaJson)
+const adapter = getAdapter('jobkorea')!
 const result = await collect(
   adapter,
   { keywords: [keyword], excludeKeywords: [], locations: [], career: 'any', initialDays: 7, description: '' },

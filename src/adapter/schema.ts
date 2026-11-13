@@ -46,6 +46,8 @@ const extract = z.discriminatedUnion('kind', [nextFlightQuery])
 export const siteAdapterSchema = z.object({
   id: z.string().regex(/^[a-z][a-z0-9-]*$/),
   name: z.string().min(1),
+  homeUrl: z.string().url(),
+  requiresLogin: z.boolean(),
   version: z.number().int().positive(),
   search: z.object({
     urlTemplate: z

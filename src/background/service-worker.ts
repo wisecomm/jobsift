@@ -1,5 +1,4 @@
-import jobkoreaJson from '../../adapters/jobkorea.json'
-import { parseAdapter } from '../adapter/schema'
+import { getAdapter } from '../adapter/registry'
 import { REQUEST_GAP_MS } from '../ai/constants'
 import { aiErrorMessage, checkKey, scoreBatch } from '../ai/gemini'
 import { createPacer } from '../ai/pacer'
@@ -13,7 +12,7 @@ import type { Request, ResponseData, ResponseFor, SettingsResult } from '../shar
 import type { SearchCriteria } from '../shared/types'
 import { openStore } from '../storage/store'
 
-const adapter = parseAdapter(jobkoreaJson)
+const adapter = getAdapter('jobkorea')!
 const CRITERIA_KEY = 'criteria'
 const storePromise = openStore()
 

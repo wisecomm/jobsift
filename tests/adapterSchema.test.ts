@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import jobkoreaJson from '../adapters/jobkorea.json'
+import { adapterIds, adapters, buildRegistry } from '../src/adapter/registry'
 import { parseAdapter } from '../src/adapter/schema'
 
 const clone = () => structuredClone(jobkoreaJson) as Record<string, any>
@@ -7,6 +8,15 @@ const clone = () => structuredClone(jobkoreaJson) as Record<string, any>
 describe('parseAdapter', () => {
   it('accepts the bundled JobKorea adapter', () => {
     expect(parseAdapter(jobkoreaJson).id).toBe('jobkorea')
+  })
+
+  it('rejects an adapter without a home address or login flag', () => {
+    const noHome = clone()
+    delete noHome.homeUrl
+    expect(() => parseAdapter(noHome)).toThrow()
+    const badFlag = clone()
+    badFlag.requiresLogin = 'no'
+    expect(() => parseAdapter(badFlag)).toThrow()
   })
 
   it('rejects a URL template without the keyword placeholder', () => {
@@ -31,5 +41,16 @@ describe('parseAdapter', () => {
     const bad = clone()
     bad.search.params[0].values.new = '1&admin=1'
     expect(() => parseAdapter(bad)).toThrow()
+  })
+})
+
+describe('adapter registry', () => {
+  it('parses every bundled adapter with a unique id', () => {
+    expect(adapters.length).toBeGreaterThan(0)
+    expect(new Set(adapterIds).size).toBe(adapterIds.length)
+  })
+
+  it('refuses two adapters with the same id', () => {
+    expect(() => buildRegistry([jobkoreaJson, jobkoreaJson])).toThrow(/jobkorea/)
   })
 })

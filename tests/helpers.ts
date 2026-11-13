@@ -1,11 +1,10 @@
 import { readFileSync } from 'node:fs'
 import { IDBFactory } from 'fake-indexeddb'
-import jobkoreaJson from '../adapters/jobkorea.json'
-import { parseAdapter } from '../src/adapter/schema'
+import { getAdapter } from '../src/adapter/registry'
 import { openStore } from '../src/storage/store'
 import type { JobPosting, SearchCriteria } from '../src/shared/types'
 
-export const adapter = parseAdapter(jobkoreaJson)
+export const adapter = getAdapter('jobkorea')!
 
 export const fixtureHtml = readFileSync(new URL('./fixtures/jobkorea-search-p1.html', import.meta.url), 'utf8')
 
