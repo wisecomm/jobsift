@@ -72,7 +72,9 @@ input, select, textarea {
 .app-header { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; align-items: center; margin-bottom: 16px; }
 .app-header h1 { margin: 0; font-size: 22px; }
 .collect-box { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.collect-box .primary { padding: 8px 18px; }
+.collect-actions { display: flex; align-items: center; gap: 8px; }
+.collect-actions button { padding: 8px 14px; }
+.collect-actions .primary { padding: 8px 18px; }
 .hint { color: var(--muted); font-size: 13px; }
 .summary { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
 .summary p { margin: 2px 0; }

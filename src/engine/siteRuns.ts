@@ -42,3 +42,7 @@ export async function recordSiteRuns(area: StorageArea, runs: readonly SiteRunSt
   for (const run of runs) merged[run.site] = run
   await area.set({ [RUNS_KEY]: merged })
 }
+
+export async function clearSiteRuns(area: StorageArea): Promise<void> {
+  await area.set({ [RUNS_KEY]: {} })
+}

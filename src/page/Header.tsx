@@ -9,18 +9,28 @@ interface Props {
   scoring: ScoringSummary | null
   pending: number
   onCollect: () => void
+  onResetCollect: () => void
   onScorePending: () => void
 }
 
-export function Header({ busy, canCollect, report, scoring, pending, onCollect, onScorePending }: Props) {
+export function Header({ busy, canCollect, report, scoring, pending, onCollect, onResetCollect, onScorePending }: Props) {
   const lines = report && reportLines(report, siteName)
   return (
     <header className="app-header">
       <h1>채용공고 모음</h1>
       <div className="collect-box">
-        <button type="button" className="primary" onClick={onCollect} disabled={busy || !canCollect}>
-          {busy ? '수집 중…' : '지금 수집'}
-        </button>
+        <div className="collect-actions">
+          <button type="button" className="primary" onClick={onCollect} disabled={busy || !canCollect}>
+            {busy ? '수집 중…' : '지금 수집'}
+          </button>
+          <button
+            type="button"
+            onClick={() => window.confirm('저장된 공고를 모두 지우고 처음부터 다시 수집합니다. 계속할까요?') && onResetCollect()}
+            disabled={busy || !canCollect}
+          >
+            초기화(수집)
+          </button>
+        </div>
         {!canCollect && <span className="hint">조건 설정에서 키워드를 저장하면 수집할 수 있습니다.</span>}
       </div>
       {(report || scoring || pending > 0) && (

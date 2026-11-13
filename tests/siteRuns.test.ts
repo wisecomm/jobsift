@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { loadSiteRuns, recordSiteRuns } from '../src/engine/siteRuns'
+import { clearSiteRuns, loadSiteRuns, recordSiteRuns } from '../src/engine/siteRuns'
 import type { CollectionSummary, SiteRunStatus } from '../src/shared/types'
 
 const summary: CollectionSummary = {
@@ -30,6 +30,13 @@ describe('site run status storage', () => {
     a.data.siteRuns = { jobkorea: { site: 'jobkorea', at: 'x', result: { kind: 'ok', summary: { scanned: 'many' } } }, second: ok('second', 'y') }
     expect(Object.keys(await loadSiteRuns(a))).toEqual(['second'])
     a.data.siteRuns = 'garbage'
+    expect(await loadSiteRuns(a)).toEqual({})
+  })
+
+  it('clears all stored runs when clearSiteRuns is called', async () => {
+    const a = area()
+    await recordSiteRuns(a, [ok('jobkorea', '2026-11-13T10:00:00Z')])
+    await clearSiteRuns(a)
     expect(await loadSiteRuns(a)).toEqual({})
   })
 })

@@ -29,7 +29,7 @@ export type Request =
   | { type: 'pendingCount' }
   | { type: 'listPostings' }
   | { type: 'updatePosting'; key: PostingKey; patch: PostingPatch }
-  | { type: 'devReset' }
+  | { type: 'resetCollect' }
 
 export interface SettingsResult {
   changed: boolean
@@ -58,7 +58,7 @@ export interface ResponseData {
   pendingCount: number
   listPostings: StoredPosting[]
   updatePosting: UpdateResult
-  devReset: CollectionReport
+  resetCollect: CollectionReport
 }
 
 export type ResponseFor<R extends Request> = { ok: true; data: ResponseData[R['type']] } | { ok: false; error: string }

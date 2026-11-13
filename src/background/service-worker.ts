@@ -8,7 +8,7 @@ import { applyCriteriaChange } from '../engine/applyCriteriaChange'
 import { normalizeCriteria, parseCriteria } from '../engine/criteria'
 import { runAllSites } from '../engine/runAllSites'
 import { scorePending, toScoringSummary, type ScoringDeps } from '../engine/scorePending'
-import { loadSiteRuns, recordSiteRuns } from '../engine/siteRuns'
+import { clearSiteRuns, loadSiteRuns, recordSiteRuns } from '../engine/siteRuns'
 import { loadSiteSettings, LAST_SITE_MESSAGE, parseSiteSettings, selectAdaptersForRun, storeSiteSettings } from '../engine/siteSettings'
 import type { Request, ResponseData, ResponseFor, SettingsResult } from '../shared/messages'
 import type { SearchCriteria } from '../shared/types'
@@ -131,10 +131,10 @@ async function handle(request: Request): Promise<ResponseData[Request['type']]> 
     case 'updatePosting':
       // Not queued behind a collection: the store transaction already makes each update atomic, and the UI must stay responsive.
       return (await storePromise).updatePosting(request.key, request.patch, new Date())
-    case 'devReset':
-      if (!import.meta.env.DEV) throw new Error('개발 빌드에서만 사용할 수 있습니다')
+    case 'resetCollect':
       return exclusive(async () => {
         await (await storePromise).clearAll()
+        await clearSiteRuns(chrome.storage.local)
         return collectNow()
       })
   }

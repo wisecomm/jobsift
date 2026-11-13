@@ -130,10 +130,12 @@ export function App() {
     return '키가 정상적으로 동작합니다.'
   }
 
-  async function devReset() {
-    setReport(await send({ type: 'devReset' }))
-    await refresh()
-  }
+  const resetCollect = () =>
+    work(async () => {
+      const result = await send({ type: 'resetCollect' })
+      setReport(result)
+      setScoring(result.scoring)
+    })
 
   async function patchPosting(key: PostingKey, patch: PostingPatch) {
     setError(null)
@@ -150,7 +152,16 @@ export function App() {
 
   return (
     <div className="app">
-      <Header busy={busy} canCollect={hasCriteria} report={report} scoring={scoring} pending={pending} onCollect={() => void collectNow()} onScorePending={() => void scoreWaiting()} />
+      <Header
+        busy={busy}
+        canCollect={hasCriteria}
+        report={report}
+        scoring={scoring}
+        pending={pending}
+        onCollect={() => void collectNow()}
+        onResetCollect={() => void resetCollect()}
+        onScorePending={() => void scoreWaiting()}
+      />
       {error && (
         <p role="alert" className="banner warn">
           오류: {error}
@@ -174,7 +185,7 @@ export function App() {
               <PostingsView postings={postings} hasCriteria={hasCriteria} siteOrder={sites.settings.siteOrder} onUpdate={(k, p) => void patchPosting(k, p)} onOpenSettings={() => setTab('settings')} />
             </div>
             <div hidden={tab !== 'settings'}>
-              <SettingsView criteria={criteria} ai={ai} onSave={saveSettings} onDeleteKey={deleteKey} onCheckKey={checkKey} onDevReset={devReset} />
+              <SettingsView criteria={criteria} ai={ai} onSave={saveSettings} onDeleteKey={deleteKey} onCheckKey={checkKey} />
             </div>
             <div hidden={tab !== 'sites'}>
               <SitesView state={sites} busy={busy} canCollect={hasCriteria} onToggle={toggleSiteOn} onMove={moveSiteOrder} onCollectSite={(id) => void collectSite(id)} />

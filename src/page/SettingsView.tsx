@@ -11,13 +11,12 @@ interface Props {
   onSave: (criteria: SearchCriteria, ai: AiInput) => Promise<string>
   onCheckKey: (apiKey: string, model: string) => Promise<string>
   onDeleteKey: () => Promise<string>
-  onDevReset: () => Promise<void>
 }
 
 const toList = (text: string) => text.split(',').map((item) => item.trim()).filter(Boolean)
 const fromList = (items: string[]) => items.join(', ')
 
-export function SettingsView({ criteria, ai, onSave, onCheckKey, onDeleteKey, onDevReset }: Props) {
+export function SettingsView({ criteria, ai, onSave, onCheckKey, onDeleteKey }: Props) {
   const [keywords, setKeywords] = useState(fromList(criteria.keywords))
   const [excludeKeywords, setExcludeKeywords] = useState(fromList(criteria.excludeKeywords))
   const [locations, setLocations] = useState(fromList(criteria.locations))
@@ -159,11 +158,6 @@ export function SettingsView({ criteria, ai, onSave, onCheckKey, onDeleteKey, on
 
       <div className="form-actions">
         <button type="submit" className="primary" disabled={pending}>저장</button>
-        {import.meta.env.DEV && (
-          <button type="button" disabled={pending} onClick={() => window.confirm('저장된 공고를 모두 지우고 다시 수집합니다. 계속할까요?') && void run(onDevReset)}>
-            전체 초기화 (개발용)
-          </button>
-        )}
       </div>
       {message && <p role={message.error ? 'alert' : 'status'} className={message.error ? 'warn' : 'ok'}>{message.text}</p>}
     </form>
