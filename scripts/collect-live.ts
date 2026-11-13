@@ -24,9 +24,10 @@ const result = await collect(
       return response.text()
     },
     knownIds: new Set(),
-    now: new Date(),
+    cutoffFor: () => new Date(Date.now() - 7 * 86_400_000),
     maxPages: LIVE_MAX_PAGES,
   },
 )
 console.error(`${result.postings.length}건, 중단 사유: ${JSON.stringify(result.stopReasons)}`)
+if (Object.keys(result.errors).length > 0) console.error(`오류: ${JSON.stringify(result.errors)}`)
 console.log(JSON.stringify(result.postings, null, 2))

@@ -1,16 +1,14 @@
 import type { SiteAdapter } from '../adapter/schema'
-import type { JobPosting, SearchCriteria } from '../shared/types'
+import type { JobPosting, SearchCriteria, StopReason } from '../shared/types'
 import { buildSearchUrl } from './buildSearchUrl'
 import { extractPage } from './extractPostings'
 
-const DAY_MS = 24 * 60 * 60 * 1000
-
-export type StopReason = 'cutoff' | 'known' | 'exhausted' | 'page-cap'
 
 export interface CollectDeps {
   fetchHtml: (url: string) => Promise<string>
   knownIds: ReadonlySet<string>
-  now: Date
+  /** Postings posted before this instant end the keyword's scan. */
+  cutoffFor: (keyword: string) => Date
   sleep?: (ms: number) => Promise<void>
   maxPages?: number
 }
@@ -18,6 +16,8 @@ export interface CollectDeps {
 export interface CollectResult {
   postings: JobPosting[]
   stopReasons: Record<string, StopReason>
+  /** Keywords whose scan failed, with the message. Their postings are withheld so the next run rescans them whole. */
+  errors: Record<string, string>
 }
 
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
@@ -27,41 +27,50 @@ export async function collect(
   criteria: SearchCriteria,
   deps: CollectDeps,
 ): Promise<CollectResult> {
-  const { fetchHtml, knownIds, now, sleep = defaultSleep } = deps
+  const { fetchHtml, knownIds, cutoffFor, sleep = defaultSleep } = deps
   const maxPages = deps.maxPages ?? adapter.search.maxPages
-  const cutoff = now.getTime() - criteria.initialDays * DAY_MS
   const byId = new Map<string, JobPosting>()
   const stopReasons: Record<string, StopReason> = {}
+  const errors: Record<string, string> = {}
   let requested = false
 
   for (const keyword of criteria.keywords) {
+    const cutoff = cutoffFor(keyword).getTime()
+    const found = new Map<string, JobPosting>()
     let reason: StopReason = 'page-cap'
-    for (let n = 0; n < maxPages; n++) {
-      if (requested) await sleep(adapter.search.requestDelayMs)
-      requested = true
-      const page = adapter.search.firstPage + n
-      const html = await fetchHtml(buildSearchUrl(adapter, criteria, keyword, page))
-      const { postings, totalPages } = extractPage(adapter, html)
+    try {
+      for (let n = 0; n < maxPages; n++) {
+        if (requested) await sleep(adapter.search.requestDelayMs)
+        requested = true
+        const page = adapter.search.firstPage + n
+        const html = await fetchHtml(buildSearchUrl(adapter, criteria, keyword, page))
+        const { postings, totalPages } = extractPage(adapter, html)
 
-      // The site's order is not guaranteed to be strict, so one stale item must not hide fresh ones after it on the same page.
-      let pageStop: StopReason | null = null
-      for (const posting of postings) {
-        if (Date.parse(posting.postedAt) < cutoff) pageStop ??= 'cutoff'
-        else if (knownIds.has(posting.externalId)) pageStop ??= 'known'
-        else if (!byId.has(posting.externalId)) byId.set(posting.externalId, posting)
+        // The site's order is not guaranteed to be strict, so one stale item must not hide fresh ones after it on the same page.
+        let pageStop: StopReason | null = null
+        for (const posting of postings) {
+          if (Date.parse(posting.postedAt) < cutoff) pageStop ??= 'cutoff'
+          else if (knownIds.has(posting.externalId)) pageStop ??= 'known'
+          else found.set(posting.externalId, posting)
+        }
+        if (pageStop) {
+          reason = pageStop
+          break
+        }
+        if (postings.length === 0 || (totalPages !== null && n + 1 >= totalPages)) {
+          reason = 'exhausted'
+          break
+        }
       }
-      if (pageStop) {
-        reason = pageStop
-        break
-      }
-      if (postings.length === 0 || (totalPages !== null && n + 1 >= totalPages)) {
-        reason = 'exhausted'
-        break
-      }
+    } catch (error) {
+      stopReasons[keyword] = 'error'
+      errors[keyword] = error instanceof Error ? error.message : String(error)
+      continue
     }
     stopReasons[keyword] = reason
+    for (const [id, posting] of found) if (!byId.has(id)) byId.set(id, posting)
   }
 
   const postings = [...byId.values()].sort((a, b) => Date.parse(b.postedAt) - Date.parse(a.postedAt))
-  return { postings, stopReasons }
+  return { postings, stopReasons, errors }
 }

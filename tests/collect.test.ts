@@ -20,10 +20,12 @@ function server(pages: Record<string, string>) {
       },
       sleep: async (ms: number) => void delays.push(ms),
       knownIds: new Set<string>(),
-      now: NOW,
+      cutoffFor: daysBack(7),
     },
   }
 }
+
+const daysBack = (days: number) => () => new Date(NOW.getTime() - days * 86_400_000)
 
 const pageUrl = (keyword: string, page: number) =>
   `https://www.jobkorea.co.kr/Search/?stext=${encodeURIComponent(keyword)}&tabType=recruit&ord=RegDtDesc&Page_No=${page}`
@@ -37,7 +39,7 @@ describe('collect', () => {
         9,
       ),
     })
-    const result = await collect(adapter, criteria({ initialDays: 1 }), s.deps)
+    const result = await collect(adapter, criteria(), { ...s.deps, cutoffFor: daysBack(1) })
     expect(result.postings.map((p) => p.externalId)).toEqual(['1', '2', '3'])
     expect(s.requested).toHaveLength(2)
     expect(result.stopReasons).toEqual({ 전산: 'cutoff' })
@@ -63,7 +65,7 @@ describe('collect', () => {
         9,
       ),
     })
-    const result = await collect(adapter, criteria({ initialDays: 1 }), s.deps)
+    const result = await collect(adapter, criteria(), { ...s.deps, cutoffFor: daysBack(1) })
     expect(result.postings.map((p) => p.externalId)).toEqual(['1', '3'])
     expect(s.requested).toHaveLength(1)
   })
@@ -98,9 +100,9 @@ describe('collect', () => {
 
   it('collects the real fixture page as one page of postings', async () => {
     const s = server({ [pageUrl('전산', 1)]: fixtureHtml })
-    const result = await collect(adapter, criteria({ initialDays: 1 }), {
+    const result = await collect(adapter, criteria(), {
       ...s.deps,
-      now: new Date('2026-11-13T20:30:00+09:00'),
+      cutoffFor: () => new Date('2026-11-12T20:30:00+09:00'),
       maxPages: 1,
     })
     expect(result.postings).toHaveLength(20)
