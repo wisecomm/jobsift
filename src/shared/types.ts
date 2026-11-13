@@ -124,3 +124,8 @@ export interface CollectionSummary {
   stopReasons: Record<string, StopReason>
   errors: Record<string, string>
 }
+
+/** The sites collection uses. Always holds at least one id of an available adapter. */
+export interface SiteSettings {
+  enabledSites: string[]
+}
