@@ -26,7 +26,13 @@ export type Request =
   | { type: 'checkAiKey'; provider?: AiProvider; apiKey: string; model: string }
   | { type: 'getSiteSettings' }
   /** Refused when it would leave no site on. */
-  | { type: 'saveSiteSettings'; enabledSites: string[]; siteOrder?: string[]; maxItemsBySite?: Record<string, number> }
+  | {
+      type: 'saveSiteSettings'
+      enabledSites: string[]
+      siteOrder?: string[]
+      maxItemsBySite?: Record<string, number>
+      keywordsBySite?: Record<string, string[]>
+    }
   /** Without `site`, every enabled site; with it, that site only. When `continueFromCap`, resumes from saved page-cap cursor. */
   | { type: 'collect'; site?: string; keyword?: string; continueFromCap?: boolean }
   | { type: 'scorePending' }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { cleanKeywordList } from '../engine/siteSettings'
 import type { SiteSettingsView } from '../shared/messages'
 import { runStatusLine, stopNoticeItems } from './format'
 import { orderedSiteList, SITES_TAB_LABEL, type SiteInfo } from './sites'
@@ -11,13 +12,15 @@ interface Props {
   onToggle: (id: string, on: boolean) => Promise<void>
   onMove: (id: string, direction: 'up' | 'down') => Promise<void>
   onUpdateMaxItems: (id: string, maxItems: number) => Promise<void>
+  onUpdateKeywords: (id: string, keywords: string[]) => Promise<void>
   onCollectSite: (id: string) => void
   onContinueSite?: (id: string, keyword?: string) => void
 }
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
+const parseKeywordsInput = (text: string) => cleanKeywordList(text.split(','))
 
-export function SitesView({ state, busy, canCollect, onToggle, onMove, onUpdateMaxItems, onCollectSite, onContinueSite }: Props) {
+export function SitesView({ state, busy, canCollect, onToggle, onMove, onUpdateMaxItems, onUpdateKeywords, onCollectSite, onContinueSite }: Props) {
   const [message, setMessage] = useState<string | null>(null)
   const ordered = orderedSiteList(state.settings.siteOrder)
   const availableCount = ordered.filter((site) => site.availability === 'available').length
@@ -47,6 +50,7 @@ export function SitesView({ state, busy, canCollect, onToggle, onMove, onUpdateM
             onToggle={(id, on) => void runAction(() => onToggle(id, on))}
             onMove={(id, direction) => void runAction(() => onMove(id, direction))}
             onUpdateMaxItems={(id, maxItems) => void runAction(() => onUpdateMaxItems(id, maxItems))}
+            onUpdateKeywords={(id, keywords) => void runAction(() => onUpdateKeywords(id, keywords))}
             onCollectSite={onCollectSite}
             onContinueSite={onContinueSite}
           />
@@ -70,9 +74,10 @@ interface RowProps extends Pick<Props, 'busy' | 'canCollect' | 'onCollectSite' |
   onToggle: (id: string, on: boolean) => void
   onMove: (id: string, direction: 'up' | 'down') => void
   onUpdateMaxItems: (id: string, maxItems: number) => void
+  onUpdateKeywords: (id: string, keywords: string[]) => void
 }
 
-function SiteRow({ site, state, isFirst, isLast, busy, canCollect, onToggle, onMove, onUpdateMaxItems, onCollectSite, onContinueSite }: RowProps) {
+function SiteRow({ site, state, isFirst, isLast, busy, canCollect, onToggle, onMove, onUpdateMaxItems, onUpdateKeywords, onCollectSite, onContinueSite }: RowProps) {
   const link = (
     <a href={site.homeUrl} target="_blank" rel="noopener noreferrer">
       {site.homeUrl}
@@ -105,6 +110,15 @@ function SiteRow({ site, state, isFirst, isLast, busy, canCollect, onToggle, onM
   const parsedLimit = Math.round(Number(maxItemsInput))
   const limitValid = Number.isFinite(parsedLimit) && parsedLimit >= 1
   const limitChanged = limitValid && parsedLimit !== savedMaxItems
+
+  const savedKeywords = state.settings.keywordsBySite?.[site.id] ?? []
+  const savedKeywordsText = savedKeywords.join(', ')
+  const [keywordsInput, setKeywordsInput] = useState(savedKeywordsText)
+  useEffect(() => {
+    setKeywordsInput(savedKeywordsText)
+  }, [savedKeywordsText])
+  const parsedKeywords = parseKeywordsInput(keywordsInput)
+  const keywordsChanged = parsedKeywords.join('\n') !== savedKeywords.join('\n')
 
   const enabled = state.settings.enabledSites.includes(site.id)
   const run = state.runs[site.id]
@@ -166,6 +180,34 @@ function SiteRow({ site, state, isFirst, isLast, busy, canCollect, onToggle, onM
                 </button>
               )}
             </form>
+          </dd>
+        </div>
+        <div className="site-keywords-row">
+          <dt>전용 키워드</dt>
+          <dd>
+            <form
+              className="site-keywords"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (keywordsChanged) onUpdateKeywords(site.id, parsedKeywords)
+              }}
+            >
+              <input
+                type="text"
+                aria-label={`${site.name} 전용 키워드`}
+                value={keywordsInput}
+                placeholder="비우면 공통 키워드 사용 · 입력 시 이 사이트만 대체 (쉼표 구분)"
+                onChange={(e) => setKeywordsInput(e.target.value)}
+              />
+              <button type="submit" disabled={busy || !keywordsChanged}>
+                적용
+              </button>
+            </form>
+            <small className="site-keywords-hint">
+              {savedKeywords.length > 0
+                ? '공통 키워드를 대체해 이 키워드로만 수집 중입니다. 비우고 적용하면 공통 키워드로 돌아갑니다.'
+                : '입력해 적용하면 공통 키워드를 대체해 이 사이트만 이 키워드로 수집합니다.'}
+            </small>
           </dd>
         </div>
       </dl>

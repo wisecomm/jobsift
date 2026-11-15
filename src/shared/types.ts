@@ -188,6 +188,8 @@ export interface SiteSettings {
   siteOrder: string[]
   /** Per-site keyword scan cap (in postings). Defaults to 2000 when omitted. */
   maxItemsBySite?: Record<string, number>
+  /** Per-site keyword override. When omitted or empty, uses `criteria.keywords`. */
+  keywordsBySite?: Record<string, string[]>
 }
 
 export type SiteRunResult = { kind: 'ok'; summary: CollectionSummary } | { kind: 'error'; message: string }

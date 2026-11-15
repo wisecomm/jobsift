@@ -23,9 +23,18 @@ import { normalizeCriteria, parseCriteria } from '../engine/criteria'
 import { runAllSites } from '../engine/runAllSites'
 import { scorePending, toScoringSummary, type ScoringDeps } from '../engine/scorePending'
 import { addSiteRunUsage, clearSiteRuns, loadSiteRuns, recordSiteRuns } from '../engine/siteRuns'
-import { loadSiteSettings, LAST_SITE_MESSAGE, parseSiteSettings, selectAdaptersForRun, siteMaxItems, storeSiteSettings } from '../engine/siteSettings'
+import {
+  keywordsBySiteChanged,
+  LAST_SITE_MESSAGE,
+  loadSiteSettings,
+  parseSiteSettings,
+  selectAdaptersForRun,
+  siteKeywords,
+  siteMaxItems,
+  storeSiteSettings,
+} from '../engine/siteSettings'
 import type { Request, ResponseData, ResponseFor, SettingsResult } from '../shared/messages'
-import type { SearchCriteria } from '../shared/types'
+import type { SearchCriteria, SiteSettings } from '../shared/types'
 import { openStore, type Store } from '../storage/store'
 
 const CRITERIA_KEY = 'criteria'
@@ -137,12 +146,18 @@ async function scoringDeps(
   }
 }
 
-async function loadResumableBySite(store: Store, keywords: readonly string[]): Promise<Record<string, string[]>> {
-  const active = new Set(keywords)
+async function loadResumableBySite(store: Store, baseKeywords: readonly string[], siteSettings: SiteSettings): Promise<Record<string, string[]>> {
   const states = await store.listCollectStates()
+  const activeBySite = new Map<string, Set<string>>()
   const grouped: Record<string, string[]> = {}
   for (const state of states) {
-    if (!state.resume || !active.has(state.keyword)) continue
+    if (!state.resume) continue
+    let active = activeBySite.get(state.site)
+    if (!active) {
+      active = new Set(siteKeywords(state.site, baseKeywords, siteSettings))
+      activeBySite.set(state.site, active)
+    }
+    if (!active.has(state.keyword)) continue
     ;(grouped[state.site] ??= []).push(state.keyword)
   }
   return grouped
@@ -171,6 +186,7 @@ async function collectNow(options?: {
       const adapter = adapterById.get(id)
       return adapter ? siteMaxItems(adapter, siteSettings) : undefined
     },
+    keywordsFor: (id) => siteKeywords(id, criteria.keywords, siteSettings),
   })
   await recordSiteRuns(chrome.storage.local, report.runs)
   return report
@@ -180,9 +196,14 @@ async function commitSettings(prev: SettingsSnapshot, next: SettingsSnapshot): P
   const changed = settingsChanged(prev, next)
   await chrome.storage.local.set({ [CRITERIA_KEY]: next.criteria })
   await storeAiSettings(chrome.storage.local, next.ai)
-  const { removed, queued } = changed
-    ? await applyCriteriaChange(await storePromise, next.criteria, { aiOn: aiEnabled(next.ai) }, new Date())
-    : { removed: 0, queued: 0 }
+  if (!changed) return { changed, removed: 0, queued: 0 }
+  const siteSettings = await loadSiteSettings(chrome.storage.local, adapterIds)
+  const { removed, queued } = await applyCriteriaChange(
+    await storePromise,
+    next.criteria,
+    { aiOn: aiEnabled(next.ai), keywordsBySite: siteSettings.keywordsBySite },
+    new Date(),
+  )
   return { changed, removed, queued }
 }
 
@@ -236,7 +257,7 @@ async function handle(request: Request, onProgress?: (text: string) => void): Pr
         readCriteria(),
         storePromise,
       ])
-      return { settings, runs, resumableBySite: await loadResumableBySite(store, criteria.keywords) }
+      return { settings, runs, resumableBySite: await loadResumableBySite(store, criteria.keywords, settings) }
     }
     case 'saveSiteSettings': {
       const known = new Set(adapterIds)
@@ -247,10 +268,18 @@ async function handle(request: Request, onProgress?: (text: string) => void): Pr
           enabledSites: request.enabledSites,
           siteOrder: request.siteOrder ?? current.siteOrder,
           maxItemsBySite: request.maxItemsBySite ?? current.maxItemsBySite,
+          keywordsBySite: request.keywordsBySite !== undefined ? request.keywordsBySite : current.keywordsBySite,
         },
         adapterIds,
       )
       await storeSiteSettings(chrome.storage.local, settings)
+      if (keywordsBySiteChanged(current, settings)) {
+        activeAbort?.abort()
+        await exclusive(async () => {
+          const [store, criteria, ai] = await Promise.all([storePromise, readCriteria(), loadAiSettings(chrome.storage.local)])
+          await applyCriteriaChange(store, criteria, { aiOn: aiEnabled(ai), keywordsBySite: settings.keywordsBySite }, new Date())
+        })
+      }
       return settings
     }
     case 'collect':

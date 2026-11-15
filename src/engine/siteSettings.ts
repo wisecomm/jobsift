@@ -9,6 +9,7 @@ const rawSchema = z.object({
   enabledSites: z.array(z.string()),
   siteOrder: z.array(z.string()).optional(),
   maxItemsBySite: z.record(z.string(), z.number()).optional(),
+  keywordsBySite: z.record(z.string(), z.array(z.string())).optional(),
 })
 
 function normalizeOrder(rawOrder: readonly string[], availableIds: readonly string[]): string[] {
@@ -42,6 +43,23 @@ function normalizeMaxItems(raw: Record<string, number> | undefined, availableIds
   return Object.keys(cleaned).length > 0 ? cleaned : undefined
 }
 
+export const cleanKeywordList = (items: readonly string[]): string[] => [...new Set(items.map((item) => item.trim()).filter(Boolean))]
+
+function normalizeKeywordsBySite(
+  raw: Record<string, readonly string[]> | undefined,
+  availableIds: readonly string[],
+): Record<string, string[]> | undefined {
+  if (!raw) return undefined
+  const known = new Set(availableIds)
+  const cleaned: Record<string, string[]> = {}
+  for (const [id, list] of Object.entries(raw)) {
+    if (!known.has(id)) continue
+    const keywords = cleanKeywordList(list)
+    if (keywords.length > 0) cleaned[id] = keywords
+  }
+  return Object.keys(cleaned).length > 0 ? cleaned : undefined
+}
+
 export const DEFAULT_MAX_ITEMS = 2000
 
 export const defaultSiteSettings = (availableIds: readonly string[]): SiteSettings => ({
@@ -56,6 +74,23 @@ export const siteMaxItems = (adapter: Pick<SiteAdapter, 'id'> | string, settings
   return settings.maxItemsBySite?.[id] ?? DEFAULT_MAX_ITEMS
 }
 
+export const siteKeywordsOverride = (
+  adapter: Pick<SiteAdapter, 'id'> | string,
+  settings?: Pick<SiteSettings, 'keywordsBySite'>,
+): string[] => {
+  const id = typeof adapter === 'string' ? adapter : adapter.id
+  return [...(settings?.keywordsBySite?.[id] ?? [])]
+}
+
+export const siteKeywords = (
+  adapter: Pick<SiteAdapter, 'id'> | string,
+  baseKeywords: readonly string[],
+  settings?: Pick<SiteSettings, 'keywordsBySite'>,
+): string[] => {
+  const override = siteKeywordsOverride(adapter, settings)
+  return override.length > 0 ? override : cleanKeywordList(baseKeywords)
+}
+
 /** Ids that no adapter owns are dropped, and an empty result falls back to every site, so collection never has nothing to run. */
 export function parseSiteSettings(raw: unknown, availableIds: readonly string[]): SiteSettings {
   const parsed = rawSchema.safeParse(raw)
@@ -64,9 +99,14 @@ export function parseSiteSettings(raw: unknown, availableIds: readonly string[])
   const enabledSet = new Set(parsed.data.enabledSites)
   const enabledSites = siteOrder.filter((id) => enabledSet.has(id))
   const maxItemsBySite = normalizeMaxItems(parsed.data.maxItemsBySite, availableIds)
+  const keywordsBySite = normalizeKeywordsBySite(parsed.data.keywordsBySite, availableIds)
   const base: SiteSettings =
     enabledSites.length > 0 ? { enabledSites, siteOrder } : { enabledSites: [...siteOrder], siteOrder }
-  return maxItemsBySite ? { ...base, maxItemsBySite } : base
+  return {
+    ...base,
+    ...(maxItemsBySite ? { maxItemsBySite } : {}),
+    ...(keywordsBySite ? { keywordsBySite } : {}),
+  }
 }
 
 export async function loadSiteSettings(area: StorageArea, availableIds: readonly string[]): Promise<SiteSettings> {
@@ -107,6 +147,28 @@ export function setSiteMaxItems(settings: SiteSettings, id: string, maxItems: nu
     maxItemsBySite: { ...(settings.maxItemsBySite ?? {}), [id]: count },
   }
 }
+
+export function setSiteKeywords(settings: SiteSettings, id: string, keywords: readonly string[]): SiteSettings {
+  const cleaned = cleanKeywordList(keywords)
+  const nextMap: Record<string, string[]> = { ...(settings.keywordsBySite ?? {}) }
+  if (cleaned.length > 0) nextMap[id] = cleaned
+  else delete nextMap[id]
+  const { keywordsBySite: _dropped, ...rest } = settings
+  return Object.keys(nextMap).length > 0 ? { ...rest, keywordsBySite: nextMap } : rest
+}
+
+const canonicalKeywordsBySite = (settings: Pick<SiteSettings, 'keywordsBySite'>): string =>
+  JSON.stringify(
+    Object.entries(settings.keywordsBySite ?? {})
+      .map(([id, list]) => [id, [...new Set(cleanKeywordList(list))].sort()] as const)
+      .filter(([, list]) => list.length > 0)
+      .sort(([a], [b]) => a.localeCompare(b)),
+  )
+
+export const keywordsBySiteChanged = (
+  before: Pick<SiteSettings, 'keywordsBySite'>,
+  after: Pick<SiteSettings, 'keywordsBySite'>,
+): boolean => canonicalKeywordsBySite(before) !== canonicalKeywordsBySite(after)
 
 export function selectAdaptersForRun(adapters: readonly SiteAdapter[], site: string | undefined, settings: SiteSettings): SiteAdapter[] {
   const byId = new Map(adapters.map((a) => [a.id, a]))

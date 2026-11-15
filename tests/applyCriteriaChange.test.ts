@@ -130,3 +130,24 @@ describe('criteriaChanged', () => {
     expect(criteriaChanged(base, criteria({ career: 'new' }))).toBe(true)
   })
 })
+
+describe('applyCriteriaChange with per-site keyword overrides', () => {
+  it('evaluates each site against its overridden keywords rather than the global list', async () => {
+    const store = await freshStore()
+    await store.putPosting(stored('jk-keep', { site: 'jobkorea', title: '임베디드 개발', jobTags: [] }))
+    await store.putPosting(stored('go-keep', { site: 'gojobs', title: '전자 직무 채용', jobTags: [] }))
+    await store.putPosting(stored('go-drop', { site: 'gojobs', title: '임베디드 시간강사', jobTags: [] }))
+
+    const result = await applyCriteriaChange(
+      store,
+      criteria({ keywords: ['임베디드'] }),
+      { aiOn: false, keywordsBySite: { gojobs: ['전자'] } },
+      NOW,
+    )
+
+    expect(result).toEqual({ removed: 1, queued: 0 })
+    expect(await store.getPosting({ site: 'jobkorea', externalId: 'jk-keep' })).toBeDefined()
+    expect(await store.getPosting({ site: 'gojobs', externalId: 'go-keep' })).toMatchObject({ matchedKeywords: ['전자'] })
+    expect(await store.getPosting({ site: 'gojobs', externalId: 'go-drop' })).toBeUndefined()
+  })
+})

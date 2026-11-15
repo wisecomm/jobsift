@@ -10,6 +10,8 @@ export interface RunAllDeps extends Omit<RunDeps, 'aiOn' | 'maxItems' | 'onProgr
   scoring?: ScoringDeps
   /** Optional per-site keyword scan cap (in postings). */
   maxItemsFor?: (siteId: string) => number | undefined
+  /** Optional per-site effective keyword list (e.g. shared keywords + site additions). */
+  keywordsFor?: (siteId: string) => readonly string[]
   onProgress?: (text: string) => void
 }
 
@@ -41,7 +43,7 @@ export async function runAllSites(
   adapters: readonly SiteAdapter[],
   criteria: SearchCriteria,
   store: Store,
-  { scoring, maxItemsFor, onProgress, ...deps }: RunAllDeps,
+  { scoring, maxItemsFor, keywordsFor, onProgress, ...deps }: RunAllDeps,
 ): Promise<CollectionReport> {
   const firstPass = scoring ? await scorePending(store, scoring) : null
 
@@ -50,7 +52,9 @@ export async function runAllSites(
     if (deps.signal?.aborted) break
     const at = deps.now.toISOString()
     try {
-      const summary = await runCollection(adapter, criteria, store, {
+      const siteKeywordList = keywordsFor?.(adapter.id)
+      const siteCriteria = siteKeywordList ? { ...criteria, keywords: [...siteKeywordList] } : criteria
+      const summary = await runCollection(adapter, siteCriteria, store, {
         ...deps,
         aiOn: scoring !== undefined,
         maxItems: maxItemsFor?.(adapter.id),

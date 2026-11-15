@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AiInput } from '../ai/settings'
-import { LAST_SITE_MESSAGE, moveSite, setSiteMaxItems, toggleSite } from '../engine/siteSettings'
+import { LAST_SITE_MESSAGE, moveSite, setSiteKeywords, setSiteMaxItems, toggleSite } from '../engine/siteSettings'
 import type { SiteSettingsView } from '../shared/messages'
 import type { AiSettingsView, AiUsageRecord, CollectionReport, PostingKey, PostingPatch, ScoringSummary, SearchCriteria, StoredPosting } from '../shared/types'
 import { send, updatePosting } from './api'
@@ -52,7 +52,11 @@ export function App() {
         setAiUsage(usage ?? null)
         setPostings(list)
         setPending(waiting)
-        setTab(saved.keywords.length === 0 ? 'settings' : 'postings')
+        setTab(
+          saved.keywords.length === 0 && !siteState.settings.enabledSites.some((id) => (siteState.settings.keywordsBySite?.[id]?.length ?? 0) > 0)
+            ? 'settings'
+            : 'postings',
+        )
       } catch (e) {
         setError(errorText(e))
       }
@@ -115,6 +119,7 @@ export function App() {
       enabledSites: next.enabledSites,
       siteOrder: next.siteOrder,
       maxItemsBySite: next.maxItemsBySite,
+      keywordsBySite: next.keywordsBySite ?? {},
     })
     setSites({ ...sites, settings })
   }
@@ -135,6 +140,12 @@ export function App() {
   async function updateSiteMaxItems(id: string, maxItems: number) {
     if (!sites) return
     await persistSiteSettings(setSiteMaxItems(sites.settings, id, maxItems))
+  }
+
+  async function updateSiteKeywords(id: string, keywords: string[]) {
+    if (!sites) return
+    await persistSiteSettings(setSiteKeywords(sites.settings, id, keywords))
+    await refresh()
   }
 
   const scoreWaiting = () =>
@@ -202,7 +213,9 @@ export function App() {
     }
   }
 
-  const hasCriteria = (criteria?.keywords.length ?? 0) > 0
+  const hasCriteria =
+    (criteria?.keywords.length ?? 0) > 0 ||
+    (sites?.settings.enabledSites.some((id) => (sites.settings.keywordsBySite?.[id]?.length ?? 0) > 0) ?? false)
   const collectNowRef = useRef(collectNow)
   collectNowRef.current = collectNow
   const wasBusyRef = useRef(false)
@@ -302,6 +315,7 @@ export function App() {
                 onToggle={toggleSiteOn}
                 onMove={moveSiteOrder}
                 onUpdateMaxItems={updateSiteMaxItems}
+                onUpdateKeywords={updateSiteKeywords}
                 onCollectSite={(id) => void collectSite(id)}
                 onContinueSite={(id, keyword) => void continueCollect(id, keyword)}
               />

@@ -287,4 +287,29 @@ describe('cross-site duplicate grouping (Q31)', () => {
     expect(postings).toHaveLength(1)
     expect(postings[0]?.alsoOn).toEqual([{ site: 'second', externalId: '99', url: 'https://second.test/jobs/99' }])
   })
+
+  it('uses per-site keywords when keywordsFor is provided', async () => {
+    const store = await freshStore()
+    const requestedUrls: string[] = []
+    const jkItems: FakeItem[] = [{ id: '1', createdAt: hoursAgo(1), title: '전산 담당자', company: '가나다' }]
+    const secondItems: FakeItem[] = [{ id: '2', createdAt: hoursAgo(1), title: '전자 연구원', company: '국책연구소' }]
+    const w = web({ [JK]: jkItems, [SECOND]: secondItems })
+    const baseFetch = w.deps.fetchHtml
+
+    await runAllSites([first, second], criteria({ keywords: ['전산'] }), store, {
+      ...w.deps,
+      fetchHtml: async (url) => {
+        requestedUrls.push(url)
+        return baseFetch(url)
+      },
+      keywordsFor: (id) => (id === 'second' ? ['전자', '연구원'] : ['전산']),
+    })
+
+    expect(requestedUrls.some((u) => u.includes('jobkorea.co.kr') && u.includes(encodeURIComponent('전산')))).toBe(true)
+    expect(requestedUrls.some((u) => u.includes('second.test') && u.includes(encodeURIComponent('전자')))).toBe(true)
+    expect(requestedUrls.some((u) => u.includes('second.test') && u.includes(encodeURIComponent('전산')))).toBe(false)
+
+    const secondPosting = await store.getPosting({ site: 'second', externalId: '2' })
+    expect(secondPosting?.matchedKeywords).toEqual(['전자', '연구원'])
+  })
 })

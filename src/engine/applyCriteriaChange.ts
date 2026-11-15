@@ -1,7 +1,8 @@
-import type { PendingPosting, RejectReason, SearchCriteria, StoredPosting } from '../shared/types'
+import { postingSources, type PendingPosting, type RejectReason, type SearchCriteria, type StoredPosting } from '../shared/types'
 import type { Store } from '../storage/store'
 import { evaluate } from './evaluate'
 import { toDiscardRecords, toPendingPosting, toStoredPosting } from './postingRecords'
+import { cleanKeywordList, siteKeywords } from './siteSettings'
 
 export interface ChangeResult {
   /** Postings the new rules turned away. */
@@ -19,13 +20,19 @@ export interface ChangeResult {
 export async function applyCriteriaChange(
   store: Store,
   criteria: SearchCriteria,
-  { aiOn }: { aiOn: boolean },
+  { aiOn, keywordsBySite }: { aiOn: boolean; keywordsBySite?: Record<string, readonly string[]> },
   now: Date,
 ): Promise<ChangeResult> {
   await Promise.all([store.clearDiscards(), store.clearCollectState()])
   const nowIso = now.toISOString()
   const result: ChangeResult = { removed: 0, queued: 0 }
   const options = { requireKeywordMatch: !aiOn }
+  const siteSettingsSlice = keywordsBySite ? { keywordsBySite: Object.fromEntries(Object.entries(keywordsBySite).map(([k, v]) => [k, [...v]])) } : undefined
+  const criteriaFor = (posting: StoredPosting | PendingPosting): SearchCriteria => {
+    if (!siteSettingsSlice) return criteria
+    const merged = cleanKeywordList(postingSources(posting).flatMap((source) => siteKeywords(source.site, criteria.keywords, siteSettingsSlice)))
+    return { ...criteria, keywords: merged }
+  }
   // Read before moving postings in, so those are not processed twice.
   const waiting: PendingPosting[] = await store.listPending()
 
@@ -36,7 +43,7 @@ export async function applyCriteriaChange(
 
   for (const posting of await store.listPostings()) {
     if (posting.status !== 'new') continue
-    const outcome = evaluate(posting, criteria, now, options)
+    const outcome = evaluate(posting, criteriaFor(posting), now, options)
     if (outcome.kind === 'reject') {
       await discardAllSources(posting, outcome.reason)
       await store.deletePosting(posting)
@@ -60,7 +67,7 @@ export async function applyCriteriaChange(
   }
 
   for (const posting of waiting) {
-    const outcome = evaluate(posting, criteria, now, options)
+    const outcome = evaluate(posting, criteriaFor(posting), now, options)
     if (outcome.kind === 'reject') {
       await discardAllSources(posting, outcome.reason)
       await store.deletePending([posting])

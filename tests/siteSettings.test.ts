@@ -3,15 +3,20 @@ import { parseAdapter } from '../src/adapter/schema'
 import {
   DEFAULT_MAX_ITEMS,
   defaultSiteMaxItems,
+  keywordsBySiteChanged,
   loadSiteSettings,
   moveSite,
   parseSiteSettings,
   selectAdaptersForRun,
+  setSiteKeywords,
   setSiteMaxItems,
+  siteKeywords,
+  siteKeywordsOverride,
   siteMaxItems,
   storeSiteSettings,
   toggleSite,
 } from '../src/engine/siteSettings'
+import type { SiteSettings } from '../src/shared/types'
 import { adapter as first } from './helpers'
 
 const ALL = ['jobkorea', 'second', 'third']
@@ -124,5 +129,41 @@ describe('per-site maxItems', () => {
       siteOrder: ALL,
       maxItemsBySite: { jobkorea: 250 },
     })
+  })
+})
+
+describe('per-site keywords override', () => {
+  it('falls back to base keywords when unset and overrides per site when configured', () => {
+    const base: SiteSettings = { enabledSites: ALL, siteOrder: ALL }
+    expect(siteKeywordsOverride(first, base)).toEqual([])
+    expect(siteKeywords(first, ['임베디드', '펌웨어'], base)).toEqual(['임베디드', '펌웨어'])
+
+    const updated = setSiteKeywords(base, 'second', [' 전자 ', '연구원', '전자', ''])
+    expect(siteKeywordsOverride(second, updated)).toEqual(['전자', '연구원'])
+    expect(siteKeywords(second, ['임베디드', '펌웨어'], updated)).toEqual(['전자', '연구원'])
+    expect(siteKeywords(first, ['임베디드', '펌웨어'], updated)).toEqual(['임베디드', '펌웨어'])
+
+    const cleared = setSiteKeywords(updated, 'second', [])
+    expect(cleared).toEqual(base)
+    expect(siteKeywords(second, ['임베디드', '펌웨어'], cleared)).toEqual(['임베디드', '펌웨어'])
+  })
+
+  it('normalizes keywordsBySite in parseSiteSettings and detects real changes', () => {
+    const parsed = parseSiteSettings(
+      {
+        enabledSites: ALL,
+        keywordsBySite: { second: [' 전자 ', '연구원', '전자'], third: ['  '], unknown: ['전산'] },
+      },
+      ALL,
+    )
+    expect(parsed).toEqual({
+      enabledSites: ALL,
+      siteOrder: ALL,
+      keywordsBySite: { second: ['전자', '연구원'] },
+    })
+
+    expect(keywordsBySiteChanged(parsed, { keywordsBySite: { second: ['연구원', ' 전자 '] } })).toBe(false)
+    expect(keywordsBySiteChanged(parsed, { keywordsBySite: { second: ['전자'] } })).toBe(true)
+    expect(keywordsBySiteChanged(parsed, {})).toBe(true)
   })
 })
