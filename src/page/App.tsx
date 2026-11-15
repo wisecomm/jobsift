@@ -5,6 +5,7 @@ import type { SiteSettingsView } from '../shared/messages'
 import type { AiSettingsView, AiUsageRecord, CollectionReport, PostingKey, PostingPatch, ScoringSummary, SearchCriteria, StoredPosting } from '../shared/types'
 import { send, updatePosting } from './api'
 import { DEFAULT_BATCH_HOURS, clampBatchHours, nextBatchRunAt, shouldTriggerBatch } from './batchSchedule'
+import { NO_AI_COLLECT_CONFIRM } from './format'
 import { Header } from './Header'
 import { PostingsView } from './PostingsView'
 import { SettingsView } from './SettingsView'
@@ -91,26 +92,37 @@ export function App() {
     }
   }
 
-  const collectNow = () =>
+  const confirmWithoutAi = () => !ai || ai.hasKey || window.confirm(NO_AI_COLLECT_CONFIRM)
+
+  const runCollectAll = () =>
     work(async () => {
       const result = await send({ type: 'collect' }, setProgress)
       setReport(result)
       setScoring(result.scoring)
     })
 
-  const collectSite = (site: string) =>
-    work(async () => {
+  const collectNow = () => {
+    if (!confirmWithoutAi()) return Promise.resolve()
+    return runCollectAll()
+  }
+
+  const collectSite = (site: string) => {
+    if (!confirmWithoutAi()) return Promise.resolve()
+    return work(async () => {
       const result = await send({ type: 'collect', site }, setProgress)
       setReport(result)
       setScoring(result.scoring)
     })
+  }
 
-  const continueCollect = (site: string, keyword?: string) =>
-    work(async () => {
+  const continueCollect = (site: string, keyword?: string) => {
+    if (!confirmWithoutAi()) return Promise.resolve()
+    return work(async () => {
       const result = await send({ type: 'collect', site, keyword, continueFromCap: true }, setProgress)
       setReport(result)
       setScoring(result.scoring)
     })
+  }
 
   async function persistSiteSettings(next: NonNullable<typeof sites>['settings']) {
     if (!sites) return
@@ -216,11 +228,19 @@ export function App() {
   const hasCriteria =
     (criteria?.keywords.length ?? 0) > 0 ||
     (sites?.settings.enabledSites.some((id) => (sites.settings.keywordsBySite?.[id]?.length ?? 0) > 0) ?? false)
-  const collectNowRef = useRef(collectNow)
-  collectNowRef.current = collectNow
+  const collectNowRef = useRef(runCollectAll)
+  collectNowRef.current = runCollectAll
   const wasBusyRef = useRef(false)
 
   const toggleBatch = (enabled: boolean) => {
+    if (
+      enabled &&
+      ai &&
+      !ai.hasKey &&
+      !window.confirm('AI 채점을 사용하지 않습니다(API 키 없음). 자동 배치가 키워드·지역·경력 규칙만으로 수집합니다. 계속 켤까요?')
+    ) {
+      return
+    }
     setBatchEnabled(enabled)
     setNextBatchAt(enabled ? nextBatchRunAt(Date.now(), batchHours) : null)
   }
@@ -258,6 +278,7 @@ export function App() {
       <Header
         busy={busy}
         canCollect={hasCriteria}
+        ai={ai}
         progress={progress}
         report={report}
         scoring={scoring}

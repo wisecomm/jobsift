@@ -1,5 +1,5 @@
 import { KST_OFFSET_MS, kstDay } from '../shared/date'
-import type { CollectionReport, CollectionSummary, ScoringSummary, SiteRunStatus } from '../shared/types'
+import type { AiSettingsView, CollectionReport, CollectionSummary, ScoringSummary, SiteRunStatus } from '../shared/types'
 
 export function formatDate(iso: string): string {
   return new Date(Date.parse(iso) + KST_OFFSET_MS).toISOString().slice(0, 10)
@@ -201,3 +201,20 @@ export function runStatusLine(run: SiteRunStatus | undefined): string {
       : ''
   return `${when} · ${summaryBody(summary)}${tokenText}`
 }
+
+export function headerAiLabel(ai: Pick<AiSettingsView, 'provider' | 'hasKey' | 'model'> | null | undefined): string | null {
+  if (!ai) return null
+  if (!ai.hasKey) return 'AI 미사용'
+  const name = ai.provider === 'exaone' ? 'EXAONE' : 'Gemini'
+  const model = ai.model.trim()
+  return model ? `${name} (${model})` : name
+}
+
+export const NO_AI_COLLECT_CONFIRM =
+  'AI 채점을 사용하지 않습니다(API 키 없음). 키워드·지역·경력 규칙만으로 수집하면 관련 없는 공고도 함께 저장될 수 있습니다. 계속 수집할까요?'
+
+export const NO_AI_RESET_COLLECT_CONFIRM =
+  'AI 채점을 사용하지 않습니다(API 키 없음). 저장된 공고를 모두 지우고 키워드 규칙만으로 처음부터 다시 수집합니다. 계속할까요?'
+
+export const NO_AI_COLLECT_WARNING =
+  'AI 채점을 사용하지 않고 수집했습니다. 키워드·지역·경력 규칙만으로 저장되어 관련 없는 공고가 포함될 수 있습니다.'

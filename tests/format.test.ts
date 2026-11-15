@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { careerLabel } from '../src/shared/career'
-import { deadlineLabel, locationSummary, reportLines, reportNotices, runStatusLine, scoringLine, stopNotices, summaryLine } from '../src/page/format'
+import { deadlineLabel, headerAiLabel, locationSummary, reportLines, reportNotices, runStatusLine, scoringLine, stopNotices, summaryLine } from '../src/page/format'
 import { SAMPLE_DESCRIPTIONS } from '../src/page/sampleDescriptions'
 import type { CollectionReport, CollectionSummary } from '../src/shared/types'
 
@@ -166,5 +166,14 @@ describe('multi-site report', () => {
         text: '나 : 최대 수집 개수를 넘어 멈춰 남은 마감 전 공고를 계속 수집할 수 있습니다.',
       },
     ])
+  })
+})
+
+describe('headerAiLabel', () => {
+  it('formats the active AI provider and model, or indicates AI is off', () => {
+    expect(headerAiLabel(null)).toBeNull()
+    expect(headerAiLabel({ provider: 'gemini', hasKey: false, model: 'gemini-3.5-flash-lite' })).toBe('AI 미사용')
+    expect(headerAiLabel({ provider: 'gemini', hasKey: true, model: 'gemini-3.5-flash-lite' })).toBe('Gemini (gemini-3.5-flash-lite)')
+    expect(headerAiLabel({ provider: 'exaone', hasKey: true, model: 'k-exaone_v2.5' })).toBe('EXAONE (k-exaone_v2.5)')
   })
 })

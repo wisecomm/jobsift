@@ -1,11 +1,12 @@
-import type { CollectionReport, ScoringSummary } from '../shared/types'
+import type { AiSettingsView, CollectionReport, ScoringSummary } from '../shared/types'
 import { DEFAULT_BATCH_HOURS, MAX_BATCH_HOURS, formatClockTime } from './batchSchedule'
-import { reportLines, reportNotices, scoringLine } from './format'
+import { NO_AI_COLLECT_WARNING, NO_AI_RESET_COLLECT_CONFIRM, headerAiLabel, reportLines, reportNotices, scoringLine } from './format'
 import { siteName } from './sites'
 
 interface Props {
   busy: boolean
   canCollect: boolean
+  ai?: AiSettingsView | null
   progress?: string | null
   report: CollectionReport | null
   scoring: ScoringSummary | null
@@ -26,6 +27,7 @@ interface Props {
 export function Header({
   busy,
   canCollect,
+  ai,
   progress,
   report,
   scoring,
@@ -44,10 +46,15 @@ export function Header({
 }: Props) {
   const lines = report && reportLines(report, siteName)
   const notices = reportNotices(report, siteName, resumableBySite)
+  const collectedWithoutAi = Boolean(report && report.scoring === null)
+  const aiLabel = headerAiLabel(ai)
   const showSummary = Boolean(report || scoring || pending > 0 || notices.length > 0)
   return (
     <header className="app-header">
-      <h1>JobSift</h1>
+      <h1 className="app-title">
+        JobSift
+        {aiLabel && <span className={ai?.hasKey ? 'ai-badge' : 'ai-badge off'}> - {aiLabel}</span>}
+      </h1>
       <div className="collect-box">
         <div className="collect-actions">
           <button type="button" className="primary" onClick={onCollect} disabled={busy || !canCollect}>
@@ -55,7 +62,13 @@ export function Header({
           </button>
           <button
             type="button"
-            onClick={() => window.confirm('저장된 공고를 모두 지우고 처음부터 다시 수집합니다. 계속할까요?') && onResetCollect()}
+            onClick={() =>
+              window.confirm(
+                ai && !ai.hasKey
+                  ? NO_AI_RESET_COLLECT_CONFIRM
+                  : '저장된 공고를 모두 지우고 처음부터 다시 수집합니다. 계속할까요?',
+              ) && onResetCollect()
+            }
             disabled={busy || !canCollect}
           >
             초기화(수집)
@@ -119,6 +132,11 @@ export function Header({
             </p>
           ))}
           {scoring && <p data-testid="scoring">{scoringLine(scoring)}</p>}
+          {collectedWithoutAi && (
+            <p role="alert" className="warn" data-testid="no-ai-warning">
+              {NO_AI_COLLECT_WARNING}
+            </p>
+          )}
           {scoring?.error && (
             <p role="alert" className="warn">
               AI 채점을 멈췄습니다. {scoring.error}
