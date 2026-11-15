@@ -4,11 +4,13 @@ import type { PostingKey, PostingPatch, StoredPosting } from '../shared/types'
 export type RpcPortMessage<R extends Request = Request> =
   | { kind: 'ping' }
   | { kind: 'progress'; text: string }
+  | { kind: 'committed' }
   | { kind: 'response'; response: ResponseFor<R> }
 
 export function send<R extends Request>(
   request: R,
   onProgress?: (text: string) => void,
+  onCommitted?: () => void,
 ): Promise<Extract<ResponseFor<R>, { ok: true }>['data']> {
   return new Promise((resolve, reject) => {
     const port = chrome.runtime.connect({ name: 'rpc' })
@@ -29,6 +31,10 @@ export function send<R extends Request>(
       if (msg.kind === 'ping') return
       if (msg.kind === 'progress') {
         onProgress?.(msg.text)
+        return
+      }
+      if (msg.kind === 'committed') {
+        onCommitted?.()
         return
       }
       finish(() => {

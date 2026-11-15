@@ -155,6 +155,24 @@ describe('collect', () => {
     expect(result.errors.전산).toBe('사용자가 수집을 중단했습니다.')
   })
 
+  it('keeps postings from finished pages when aborted inside fetchHtml', async () => {
+    const ac = new AbortController()
+    const result = await collect(adapter, criteria(), {
+      now: NOW,
+      knownIds: new Set(),
+      sleep: async () => {},
+      signal: ac.signal,
+      fetchHtml: async (url) => {
+        if (url === pageUrl('전산', 1)) return fakePage([{ id: '1', createdAt: hoursAgo(1) }], 5)
+        ac.abort()
+        throw new Error('수집이 중단되었습니다.')
+      },
+    })
+    expect(result.postings.map((p) => p.externalId)).toEqual(['1'])
+    expect(result.stopReasons).toEqual({ 전산: 'error' })
+    expect(result.errors.전산).toBe('사용자가 수집을 중단했습니다.')
+  })
+
   it('excludes expired postings from the maxItems count when now is provided', async () => {
     const pastDeadline = '2026-11-10T00:00:00+09:00'
     const openDeadline = '2026-12-01T00:00:00+09:00'

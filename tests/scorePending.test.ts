@@ -142,4 +142,40 @@ describe('scorePending', () => {
     expect(p1?.tokenUsage).toEqual({ inputTokens: 10, outputTokens: 5, thoughtTokens: 5, cachedTokens: 0, totalTokens: 20, batchSize: 10 })
     expect(p12?.tokenUsage).toEqual({ inputTokens: 50, outputTokens: 25, thoughtTokens: 25, cachedTokens: 0, totalTokens: 100, batchSize: 2 })
   })
+
+  it('calls onBatchCommitted after each committed batch and stops before a failed batch', async () => {
+    const store = await queued(25)
+    const commits: number[] = []
+    const log: string[] = []
+    await scorePending(store, {
+      ...deps(log, scorer(log, { onCall: 2, error: { kind: 'error', error: { kind: 'rateLimited' } } }), 0),
+      onBatchCommitted: () => {
+        commits.push(commits.length + 1)
+      },
+    })
+    expect(commits).toEqual([1])
+    expect(await store.listPostings('jobkorea')).toHaveLength(10)
+    expect(await store.listPending('jobkorea')).toHaveLength(15)
+  })
+
+  it('commits a batch whose AI response finished right as abort was signaled, then stops', async () => {
+    const store = await queued(25)
+    const ac = new AbortController()
+    const commits: number[] = []
+    const score: ScoreFn = async (items) => {
+      ac.abort()
+      return { kind: 'ok', scores: items.map((item) => ({ index: item.index, score: 85, reason: '적합' })) }
+    }
+    const pass = await scorePending(store, {
+      ...deps([], score, 60),
+      signal: ac.signal,
+      onBatchCommitted: () => {
+        commits.push(commits.length + 1)
+      },
+    })
+    expect(pass).toMatchObject({ scored: 10, kept: 10, pendingLeft: 15, error: null })
+    expect(commits).toEqual([1])
+    expect(await store.listPostings('jobkorea')).toHaveLength(10)
+    expect(await store.listPending('jobkorea')).toHaveLength(15)
+  })
 })

@@ -49,14 +49,17 @@ describe('page api send', () => {
 
     const req: Request = { type: 'getAiUsage' }
     const progress: string[] = []
-    const promise = send(req, (text) => progress.push(text))
+    let committed = 0
+    const promise = send(req, (text) => progress.push(text), () => committed++)
 
     expect(connect).toHaveBeenCalledWith({ name: 'rpc' })
     expect(fake.postMessage).toHaveBeenCalledWith(req)
 
     fake.emitMessage({ kind: 'ping' })
     fake.emitMessage({ kind: 'progress', text: '잡코리아 수집 중…' })
+    fake.emitMessage({ kind: 'committed' })
     expect(progress).toEqual(['잡코리아 수집 중…'])
+    expect(committed).toBe(1)
     expect(fake.disconnect).not.toHaveBeenCalled()
 
     const payload = emptyAiUsage()

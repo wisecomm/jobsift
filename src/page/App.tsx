@@ -77,16 +77,46 @@ export function App() {
     setAiUsage(usage)
   }, [])
 
+  const refreshPromiseRef = useRef<Promise<void> | null>(null)
+  const refreshNeededRef = useRef(false)
+
+  const scheduleRefresh = useCallback(() => {
+    refreshNeededRef.current = true
+    if (refreshPromiseRef.current) return refreshPromiseRef.current
+    const loop = (async () => {
+      try {
+        while (refreshNeededRef.current) {
+          refreshNeededRef.current = false
+          await refresh()
+        }
+      } finally {
+        refreshPromiseRef.current = null
+      }
+    })()
+    refreshPromiseRef.current = loop
+    return loop
+  }, [refresh])
+
+  const syncLive = () => {
+    void scheduleRefresh().catch(() => undefined)
+  }
+
   async function work(task: () => Promise<void>) {
     setBusy(true)
     setProgress(null)
     setError(null)
+    let taskFailed = false
     try {
       await task()
-      await refresh()
     } catch (e) {
+      taskFailed = true
       setError(errorText(e))
     } finally {
+      try {
+        await scheduleRefresh()
+      } catch (e) {
+        if (!taskFailed) setError(errorText(e))
+      }
       setProgress(null)
       setBusy(false)
     }
@@ -96,7 +126,7 @@ export function App() {
 
   const runCollectAll = () =>
     work(async () => {
-      const result = await send({ type: 'collect' }, setProgress)
+      const result = await send({ type: 'collect' }, setProgress, syncLive)
       setReport(result)
       setScoring(result.scoring)
     })
@@ -109,7 +139,7 @@ export function App() {
   const collectSite = (site: string) => {
     if (!confirmWithoutAi()) return Promise.resolve()
     return work(async () => {
-      const result = await send({ type: 'collect', site }, setProgress)
+      const result = await send({ type: 'collect', site }, setProgress, syncLive)
       setReport(result)
       setScoring(result.scoring)
     })
@@ -118,7 +148,7 @@ export function App() {
   const continueCollect = (site: string, keyword?: string) => {
     if (!confirmWithoutAi()) return Promise.resolve()
     return work(async () => {
-      const result = await send({ type: 'collect', site, keyword, continueFromCap: true }, setProgress)
+      const result = await send({ type: 'collect', site, keyword, continueFromCap: true }, setProgress, syncLive)
       setReport(result)
       setScoring(result.scoring)
     })
@@ -162,7 +192,7 @@ export function App() {
 
   const scoreWaiting = () =>
     work(async () => {
-      setScoring(await send({ type: 'scorePending' }, setProgress))
+      setScoring(await send({ type: 'scorePending' }, setProgress, syncLive))
     })
 
   async function reloadSettings() {
@@ -204,7 +234,7 @@ export function App() {
       setPending(0)
       setReport(null)
       setScoring(null)
-      const result = await send({ type: 'resetCollect' }, setProgress)
+      const result = await send({ type: 'resetCollect' }, setProgress, syncLive)
       setReport(result)
       setScoring(result.scoring)
     })
@@ -219,6 +249,7 @@ export function App() {
     try {
       const updated = await updatePosting(key, patch)
       setPostings((all) => all.map((p) => (p.site === key.site && p.externalId === key.externalId ? updated : p)))
+      if (refreshPromiseRef.current) syncLive()
     } catch (e) {
       setError(errorText(e))
       await refresh()

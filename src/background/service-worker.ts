@@ -95,17 +95,20 @@ function keepServiceWorkerAlive(): () => void {
 let queue: Promise<unknown> = Promise.resolve()
 let queuedCount = 0
 let activeAbort: AbortController | null = null
+const queuedAborts = new Set<AbortController>()
 
 function exclusive<T>(task: (signal: AbortSignal) => Promise<T>, onProgress?: (text: string) => void): Promise<T> {
   if (queuedCount > 0) onProgress?.('이전 작업이 끝날 때까지 대기 중…')
   queuedCount++
+  const controller = new AbortController()
+  queuedAborts.add(controller)
   const result = queue.then(async () => {
-    const controller = new AbortController()
     activeAbort = controller
     const stop = keepServiceWorkerAlive()
     try {
       return await task(controller.signal)
     } finally {
+      queuedAborts.delete(controller)
       if (activeAbort === controller) activeAbort = null
       queuedCount--
       stop()
@@ -120,7 +123,7 @@ const pace = createPacer(REQUEST_GAP_MS, Date.now, (ms) => abortableSleep(ms, ac
 /** Defined exactly when AI is on. */
 async function scoringDeps(
   criteria: SearchCriteria,
-  options?: { signal?: AbortSignal; onProgress?: (text: string) => void },
+  options?: { signal?: AbortSignal; onProgress?: (text: string) => void; onBatchCommitted?: () => void },
 ): Promise<ScoringDeps | undefined> {
   const ai = await loadAiSettings(chrome.storage.local)
   if (!aiEnabled(ai)) return undefined
@@ -133,6 +136,7 @@ async function scoringDeps(
     pace: () => pace(provider === 'exaone' ? EXAONE_REQUEST_GAP_MS : REQUEST_GAP_MS),
     signal: options?.signal,
     onProgress: ({ scored, total }) => options?.onProgress?.(`AI 채점 중 (${scored}/${total}건)…`),
+    onBatchCommitted: options?.onBatchCommitted,
     score: async (items) => {
       try {
         return await scoreWithProvider(ai, instruction, items, { fetch: (url, init) => fetch(url, init), signal: options?.signal })
@@ -169,6 +173,7 @@ async function collectNow(options?: {
   continueFromCap?: boolean
   signal?: AbortSignal
   onProgress?: (text: string) => void
+  onCommitted?: () => void
 }): Promise<ResponseData['collect']> {
   options?.onProgress?.('수집 준비 중…')
   const [store, criteria, siteSettings] = await Promise.all([storePromise, readCriteria(), loadSiteSettings(chrome.storage.local, adapterIds)])
@@ -180,8 +185,9 @@ async function collectNow(options?: {
     continueFromCap: options?.continueFromCap,
     signal: options?.signal,
     onProgress: options?.onProgress,
+    onSiteCommitted: options?.onCommitted,
     now: new Date(),
-    scoring: await scoringDeps(criteria, options),
+    scoring: await scoringDeps(criteria, { signal: options?.signal, onProgress: options?.onProgress, onBatchCommitted: options?.onCommitted }),
     maxItemsFor: (id) => {
       const adapter = adapterById.get(id)
       return adapter ? siteMaxItems(adapter, siteSettings) : undefined
@@ -207,7 +213,7 @@ async function commitSettings(prev: SettingsSnapshot, next: SettingsSnapshot): P
   return { changed, removed, queued }
 }
 
-async function handle(request: Request, onProgress?: (text: string) => void): Promise<ResponseData[Request['type']]> {
+async function handle(request: Request, onProgress?: (text: string) => void, onCommitted?: () => void): Promise<ResponseData[Request['type']]> {
   switch (request.type) {
     case 'getCriteria':
       return readCriteria()
@@ -291,6 +297,7 @@ async function handle(request: Request, onProgress?: (text: string) => void): Pr
             continueFromCap: request.continueFromCap,
             signal,
             onProgress,
+            onCommitted,
           }),
         onProgress,
       )
@@ -298,7 +305,7 @@ async function handle(request: Request, onProgress?: (text: string) => void): Pr
       return exclusive(async (signal) => {
         onProgress?.('AI 채점 준비 중…')
         const [criteria, ai, store] = await Promise.all([readCriteria(), loadAiSettings(chrome.storage.local), storePromise])
-        const deps = await scoringDeps(criteria, { signal, onProgress })
+        const deps = await scoringDeps(criteria, { signal, onProgress, onBatchCommitted: onCommitted })
         if (!deps) return { scored: 0, kept: 0, lowScore: 0, pendingLeft: (await store.listPending()).length, error: 'AI 채점이 꺼져 있습니다. 조건 설정에서 API 키를 저장해 주세요.' }
         const pass = await scorePending(store, deps)
         await addSiteRunUsage(chrome.storage.local, pass.usageBySite)
@@ -314,14 +321,15 @@ async function handle(request: Request, onProgress?: (text: string) => void): Pr
     case 'resetCollect':
       activeAbort?.abort()
       return exclusive(async (signal) => {
+        if (signal.aborted) return collectNow({ signal, onProgress, onCommitted })
         onProgress?.('저장된 공고를 초기화하는 중…')
         await (await storePromise).clearAll()
         await clearSiteRuns(chrome.storage.local)
-        return collectNow({ signal, onProgress })
+        return collectNow({ signal, onProgress, onCommitted })
       }, onProgress)
     case 'cancelWork': {
-      const hadActive = activeAbort !== null
-      activeAbort?.abort()
+      const hadActive = queuedAborts.size > 0
+      for (const controller of queuedAborts) controller.abort()
       return hadActive
     }
   }
@@ -356,7 +364,7 @@ chrome.runtime.onConnect.addListener((port) => {
     }
     pingTimer = setInterval(() => postSafe({ kind: 'ping' }), KEEPALIVE_MS)
 
-    handle(message, (text) => postSafe({ kind: 'progress', text }))
+    handle(message, (text) => postSafe({ kind: 'progress', text }), () => postSafe({ kind: 'committed' }))
       .then((data) => postSafe({ kind: 'response', response: { ok: true, data } as ResponseFor<Request> }))
       .catch((error: unknown) =>
         postSafe({

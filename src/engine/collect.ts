@@ -137,7 +137,10 @@ export async function collect(
       }
     } catch (error) {
       stopReasons[keyword] = 'error'
-      errors[keyword] = error instanceof Error ? error.message : String(error)
+      errors[keyword] = signal?.aborted ? '사용자가 수집을 중단했습니다.' : error instanceof Error ? error.message : String(error)
+      if (signal?.aborted) {
+        for (const [id, posting] of found) if (!byId.has(id)) byId.set(id, posting)
+      }
       continue
     }
     stopReasons[keyword] = reason

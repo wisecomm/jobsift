@@ -18,6 +18,8 @@ export interface ScoringDeps {
   onUsage?: (usage: TokenUsage, scoredCount: number) => Promise<void> | void
   signal?: AbortSignal
   onProgress?: (progress: { scored: number; total: number }) => void
+  /** Called right after each scored batch is committed to the store. */
+  onBatchCommitted?: () => void
 }
 
 export interface ScoringPass {
@@ -37,7 +39,7 @@ const queueOrder = (a: PendingPosting, b: PendingPosting) =>
  * Drains the pending queue of every site batch by batch, so the batch size and request gap hold across sites. Each batch is committed as it finishes, and the first failed batch
  * ends the pass with the rest still queued, so there is no retry loop to burn the user's quota.
  */
-export async function scorePending(store: Store, { score, pace, minScore, now, onUsage, signal, onProgress }: ScoringDeps): Promise<ScoringPass> {
+export async function scorePending(store: Store, { score, pace, minScore, now, onUsage, signal, onProgress, onBatchCommitted }: ScoringDeps): Promise<ScoringPass> {
   const queue = (await store.listPending()).sort(queueOrder)
   const pass: ScoringPass = { scored: 0, kept: 0, lowScore: 0, pendingLeft: queue.length, error: null }
   const nowIso = now.toISOString()
@@ -49,7 +51,7 @@ export async function scorePending(store: Store, { score, pace, minScore, now, o
     await pace()
     if (signal?.aborted) break
     const result = await score(toScoreItems(batch))
-    if (signal?.aborted) break
+    if (signal?.aborted && result.kind !== 'ok') break
     if (result.kind === 'error') {
       pass.error = result.error
       break
@@ -93,6 +95,8 @@ export async function scorePending(store: Store, { score, pace, minScore, now, o
     pass.lowScore += lowScoreCount
     pass.pendingLeft -= batch.length
     onProgress?.({ scored: pass.scored, total: queue.length })
+    onBatchCommitted?.()
+    if (signal?.aborted) break
   }
   return pass
 }

@@ -13,6 +13,7 @@ export interface RunAllDeps extends Omit<RunDeps, 'aiOn' | 'maxItems' | 'onProgr
   /** Optional per-site effective keyword list (e.g. shared keywords + site additions). */
   keywordsFor?: (siteId: string) => readonly string[]
   onProgress?: (text: string) => void
+  onSiteCommitted?: () => void
 }
 
 const sum = (passes: ScoringPass[], field: 'scored' | 'kept' | 'lowScore') => passes.reduce((total, pass) => total + pass[field], 0)
@@ -43,7 +44,7 @@ export async function runAllSites(
   adapters: readonly SiteAdapter[],
   criteria: SearchCriteria,
   store: Store,
-  { scoring, maxItemsFor, keywordsFor, onProgress, ...deps }: RunAllDeps,
+  { scoring, maxItemsFor, keywordsFor, onProgress, onSiteCommitted, ...deps }: RunAllDeps,
 ): Promise<CollectionReport> {
   const firstPass = scoring ? await scorePending(store, scoring) : null
 
@@ -62,6 +63,7 @@ export async function runAllSites(
           onProgress?.(`${adapter.name} (${index + 1}/${adapters.length}) · "${keyword}" ${page}/${maxPages}페이지 수집 중 (${collected}건)…`),
       })
       runs.push({ site: adapter.id, at, result: { kind: 'ok', summary } })
+      onSiteCommitted?.()
     } catch (error) {
       runs.push({ site: adapter.id, at, result: { kind: 'error', message: error instanceof Error ? error.message : String(error) } })
     }
