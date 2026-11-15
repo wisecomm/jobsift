@@ -11,10 +11,8 @@ export const fixtureHtml = readFileSync(new URL('./fixtures/jobkorea-search-p1.h
 export function criteria(overrides: Partial<SearchCriteria> = {}): SearchCriteria {
   return {
     keywords: ['전산'],
-    excludeKeywords: [],
     locations: [],
     career: 'any',
-    initialDays: 7,
     description: '',
     ...overrides,
   }

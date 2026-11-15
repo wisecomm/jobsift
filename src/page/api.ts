@@ -1,10 +1,57 @@
 import type { Request, ResponseFor } from '../shared/messages'
 import type { PostingKey, PostingPatch, StoredPosting } from '../shared/types'
 
-export async function send<R extends Request>(request: R): Promise<Extract<ResponseFor<R>, { ok: true }>['data']> {
-  const response: ResponseFor<R> = await chrome.runtime.sendMessage(request)
-  if (!response.ok) throw new Error(response.error)
-  return response.data
+export type RpcPortMessage<R extends Request = Request> =
+  | { kind: 'ping' }
+  | { kind: 'progress'; text: string }
+  | { kind: 'response'; response: ResponseFor<R> }
+
+export function send<R extends Request>(
+  request: R,
+  onProgress?: (text: string) => void,
+): Promise<Extract<ResponseFor<R>, { ok: true }>['data']> {
+  return new Promise((resolve, reject) => {
+    const port = chrome.runtime.connect({ name: 'rpc' })
+    let settled = false
+
+    const finish = (fn: () => void) => {
+      if (settled) return
+      settled = true
+      try {
+        port.disconnect()
+      } catch {
+        // already disconnected
+      }
+      fn()
+    }
+
+    port.onMessage.addListener((msg: RpcPortMessage<R>) => {
+      if (msg.kind === 'ping') return
+      if (msg.kind === 'progress') {
+        onProgress?.(msg.text)
+        return
+      }
+      finish(() => {
+        if (!msg.response.ok) reject(new Error(msg.response.error))
+        else resolve(msg.response.data)
+      })
+    })
+
+    port.onDisconnect.addListener(() => {
+      const reason = chrome.runtime.lastError?.message
+      finish(() =>
+        reject(
+          new Error(
+            reason
+              ? `백그라운드 연결이 끊어졌습니다: ${reason}`
+              : '백그라운드 응답 전에 연결이 끊어졌습니다. 확장 프로그램을 새로고침한 뒤 다시 시도해 주세요.',
+          ),
+        ),
+      )
+    })
+
+    port.postMessage(request)
+  })
 }
 
 export async function updatePosting(key: PostingKey, patch: PostingPatch): Promise<StoredPosting> {

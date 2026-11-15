@@ -22,7 +22,6 @@ export function buildInstruction(criteria: SearchCriteria): string {
   if (description !== '') return description
   const lines: string[] = []
   if (criteria.keywords.length > 0) lines.push(`관심 있는 분야 키워드: ${criteria.keywords.join(', ')}`)
-  if (criteria.excludeKeywords.length > 0) lines.push(`피하고 싶은 키워드: ${criteria.excludeKeywords.join(', ')}`)
   if (criteria.career !== 'any') lines.push(`희망 경력: ${CAREER_TEXT[criteria.career]}`)
   return lines.length > 0 ? lines.join('\n') : '특별히 적어 둔 조건이 없습니다. 일반적인 구직자에게 무난히 맞는 공고일수록 높게 평가합니다.'
 }

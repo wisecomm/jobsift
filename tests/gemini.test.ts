@@ -62,7 +62,28 @@ describe('scoreBatch response', () => {
   it('reads the text from a model_output step among other step types', async () => {
     const other = [{ type: 'thought', summary: 'hmm' }, { type: 'user_input', content: 'x' }]
     const { result } = run(() => completed(JSON.stringify([...goodScores].reverse()), other))
-    expect(await result).toEqual({ kind: 'ok', scores: goodScores })
+    expect(await result).toMatchObject({ kind: 'ok', scores: goodScores, usage: { totalTokens: 1 } })
+  })
+
+  it('extracts detailed token usage from the response', async () => {
+    const { result } = run(() =>
+      json({
+        status: 'completed',
+        steps: [{ type: 'model_output', content: [{ type: 'text', text: JSON.stringify(goodScores) }] }],
+        usage: {
+          total_input_tokens: 420,
+          total_output_tokens: 180,
+          total_thought_tokens: 250,
+          total_cached_tokens: 50,
+          total_tokens: 850,
+        },
+      }),
+    )
+    expect(await result).toEqual({
+      kind: 'ok',
+      scores: goodScores,
+      usage: { inputTokens: 420, outputTokens: 180, thoughtTokens: 250, cachedTokens: 50, totalTokens: 850 },
+    })
   })
 
   it('joins several text parts of the output', async () => {

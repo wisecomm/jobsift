@@ -8,6 +8,7 @@ const SETTINGS_KEY = 'siteSettings'
 const rawSchema = z.object({
   enabledSites: z.array(z.string()),
   siteOrder: z.array(z.string()).optional(),
+  maxItemsBySite: z.record(z.string(), z.number()).optional(),
 })
 
 function normalizeOrder(rawOrder: readonly string[], availableIds: readonly string[]): string[] {
@@ -29,10 +30,31 @@ function normalizeOrder(rawOrder: readonly string[], availableIds: readonly stri
   return ordered
 }
 
+function normalizeMaxItems(raw: Record<string, number> | undefined, availableIds: readonly string[]): Record<string, number> | undefined {
+  if (!raw) return undefined
+  const known = new Set(availableIds)
+  const cleaned: Record<string, number> = {}
+  for (const [id, value] of Object.entries(raw)) {
+    if (!known.has(id) || !Number.isFinite(value)) continue
+    const count = Math.round(value)
+    if (count >= 1) cleaned[id] = count
+  }
+  return Object.keys(cleaned).length > 0 ? cleaned : undefined
+}
+
+export const DEFAULT_MAX_ITEMS = 2000
+
 export const defaultSiteSettings = (availableIds: readonly string[]): SiteSettings => ({
   enabledSites: [...availableIds],
   siteOrder: [...availableIds],
 })
+
+export const defaultSiteMaxItems = (_adapter?: Pick<SiteAdapter, 'search'>): number => DEFAULT_MAX_ITEMS
+
+export const siteMaxItems = (adapter: Pick<SiteAdapter, 'id'> | string, settings: SiteSettings): number => {
+  const id = typeof adapter === 'string' ? adapter : adapter.id
+  return settings.maxItemsBySite?.[id] ?? DEFAULT_MAX_ITEMS
+}
 
 /** Ids that no adapter owns are dropped, and an empty result falls back to every site, so collection never has nothing to run. */
 export function parseSiteSettings(raw: unknown, availableIds: readonly string[]): SiteSettings {
@@ -41,7 +63,10 @@ export function parseSiteSettings(raw: unknown, availableIds: readonly string[])
   const siteOrder = normalizeOrder(parsed.data.siteOrder ?? [], availableIds)
   const enabledSet = new Set(parsed.data.enabledSites)
   const enabledSites = siteOrder.filter((id) => enabledSet.has(id))
-  return enabledSites.length > 0 ? { enabledSites, siteOrder } : { enabledSites: [...siteOrder], siteOrder }
+  const maxItemsBySite = normalizeMaxItems(parsed.data.maxItemsBySite, availableIds)
+  const base: SiteSettings =
+    enabledSites.length > 0 ? { enabledSites, siteOrder } : { enabledSites: [...siteOrder], siteOrder }
+  return maxItemsBySite ? { ...base, maxItemsBySite } : base
 }
 
 export async function loadSiteSettings(area: StorageArea, availableIds: readonly string[]): Promise<SiteSettings> {
@@ -60,7 +85,7 @@ export function toggleSite(settings: SiteSettings, id: string, on: boolean): Tog
   else enabledSet.delete(id)
   if (enabledSet.size === 0) return { kind: 'last-site' }
   const enabledSites = settings.siteOrder.filter((siteId) => enabledSet.has(siteId))
-  return enabledSites.length === 0 ? { kind: 'last-site' } : { kind: 'changed', settings: { enabledSites, siteOrder: [...settings.siteOrder] } }
+  return enabledSites.length === 0 ? { kind: 'last-site' } : { kind: 'changed', settings: { ...settings, enabledSites, siteOrder: [...settings.siteOrder] } }
 }
 
 export function moveSite(settings: SiteSettings, id: string, direction: 'up' | 'down'): SiteSettings {
@@ -71,7 +96,16 @@ export function moveSite(settings: SiteSettings, id: string, direction: 'up' | '
   const siteOrder = [...settings.siteOrder]
   ;[siteOrder[index], siteOrder[target]] = [siteOrder[target]!, siteOrder[index]!]
   const enabledSet = new Set(settings.enabledSites)
-  return { siteOrder, enabledSites: siteOrder.filter((siteId) => enabledSet.has(siteId)) }
+  return { ...settings, siteOrder, enabledSites: siteOrder.filter((siteId) => enabledSet.has(siteId)) }
+}
+
+export function setSiteMaxItems(settings: SiteSettings, id: string, maxItems: number): SiteSettings {
+  const count = Math.max(1, Math.round(maxItems))
+  if (!Number.isFinite(count)) return settings
+  return {
+    ...settings,
+    maxItemsBySite: { ...(settings.maxItemsBySite ?? {}), [id]: count },
+  }
 }
 
 export function selectAdaptersForRun(adapters: readonly SiteAdapter[], site: string | undefined, settings: SiteSettings): SiteAdapter[] {

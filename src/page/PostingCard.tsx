@@ -1,6 +1,6 @@
-import { postingSources, type PostingKey, type PostingPatch, type StoredPosting } from '../shared/types'
 import { careerLabel } from '../shared/career'
-import { deadlineLabel, formatDate, locationSummary } from './format'
+import { postingSources, type PostingKey, type PostingPatch, type StoredPosting } from '../shared/types'
+import { deadlineLabel, formatDate, formatDateTime, locationSummary } from './format'
 import { MemoField } from './MemoField'
 import { siteName } from './sites'
 import { STATUS_LABEL, actionsFor } from './statuses'
@@ -15,23 +15,17 @@ export function PostingCard({ posting: p, now, onUpdate }: Props) {
   const deadline = deadlineLabel(p.deadline, now)
   const key = { site: p.site, externalId: p.externalId }
   const sources = postingSources(p)
+  const regionText = p.locations.length > 0 ? locationSummary(p.locations) : '지역무관'
+  const matchText =
+    p.matchedKeywords.length > 0
+      ? `일치 키워드: ${p.matchedKeywords.join(', ')} · 지역: ${regionText}`
+      : `지역: ${regionText}`
+
   return (
     <li className={`card status-${p.status}`}>
-      {p.score !== null && (
-        <div className="score-badge" aria-label={`AI 점수 ${p.score}점`}>
-          <strong>{p.score}</strong>
-          <span>점</span>
-        </div>
-      )}
       <div className="card-main">
-        <h3>
-          <a href={p.url} target="_blank" rel="noreferrer">
-            {p.title}
-          </a>
-        </h3>
-        <p className="company">
-          {p.company}
-          <span className="site">
+        <div className="card-meta">
+          <span className="site-pill">
             {sources.length === 1
               ? siteName(p.site)
               : sources.map((source, index) => (
@@ -43,40 +37,62 @@ export function PostingCard({ posting: p, now, onUpdate }: Props) {
                   </span>
                 ))}
           </span>
-          {p.status !== 'new' && <span className="state">{STATUS_LABEL[p.status]}</span>}
-        </p>
-        <dl className="facts">
-          <div><dt>지역</dt><dd>{locationSummary(p.locations)}</dd></div>
-          <div><dt>경력</dt><dd>{careerLabel(p.career)}</dd></div>
-          <div><dt>등록</dt><dd>{formatDate(p.postedAt)}</dd></div>
-          <div>
-            <dt>마감</dt>
-            <dd>
-              {deadline.date && `${deadline.date} `}
-              <span className={deadline.urgent ? 'badge urgent' : 'badge'}>{deadline.badge}</span>
-            </dd>
-          </div>
-        </dl>
-        {p.matchedKeywords.length > 0 && (
-          <ul className="chips" aria-label="일치한 키워드">
-            {p.matchedKeywords.map((k) => (
-              <li key={k}>{k}</li>
-            ))}
-          </ul>
-        )}
-        {p.score !== null && p.scoreReason && (
-          <p className="reason" title={p.scoreReason}>
-            {p.scoreReason}
-          </p>
-        )}
-        <MemoField key={p.memo} memo={p.memo} onSave={(memo) => onUpdate(key, { memo })} />
+          <strong className="company-name">{p.company}</strong>
+          <span className="meta-muted">· {regionText}</span>
+          <span className="career-pill">{careerLabel(p.career)}</span>
+          {p.score !== null && (
+            <span className="score-pill" aria-label={`AI 점수 ${p.score}점`}>
+              AI {p.score}점
+            </span>
+          )}
+          {p.status !== 'new' && <span className="state-pill">{STATUS_LABEL[p.status]}</span>}
+          <span className="meta-muted">· 등록: {formatDate(p.postedAt)}</span>
+          <span className={deadline.date ? 'meta-deadline' : 'meta-muted'}>
+            · 마감: {deadline.date ?? deadline.badge}
+            {deadline.date && deadline.urgent ? ` (${deadline.badge})` : ''}
+          </span>
+          <span className="meta-muted">· 수집: {formatDateTime(p.collectedAt)}</span>
+        </div>
+
+        <h3 className="card-title">
+          <a href={p.url} target="_blank" rel="noreferrer">
+            {p.title} <span aria-hidden="true">↗</span>
+          </a>
+        </h3>
+
+        <div className="match-box">
+          {p.score !== null && p.scoreReason ? (
+            <>
+              <strong>
+                AI 평가 ({p.score}점
+                {p.tokenUsage && p.tokenUsage.totalTokens > 0 ? ` · ~${p.tokenUsage.totalTokens.toLocaleString('ko-KR')}토큰` : ''}):
+              </strong>{' '}
+              {p.scoreReason}
+            </>
+          ) : (
+            <>
+              <strong>매칭 조건:</strong> {matchText}
+            </>
+          )}
+        </div>
+
+        <ul className="chips" aria-label="키워드 태그">
+          {p.matchedKeywords.map((k) => (
+            <li key={k}>#{k}</li>
+          ))}
+          {p.locations.length === 0 && <li>#지역무관</li>}
+        </ul>
       </div>
-      <div className="actions">
-        {actionsFor(p.status).map((a) => (
-          <button key={a.to} type="button" onClick={() => onUpdate(key, { status: a.to })}>
-            {a.label}
-          </button>
-        ))}
+
+      <div className="card-side">
+        <div className="actions-row">
+          {actionsFor(p.status).map((a) => (
+            <button key={a.to} type="button" onClick={() => onUpdate(key, { status: a.to })}>
+              {a.label}
+            </button>
+          ))}
+        </div>
+        <MemoField key={p.memo} memo={p.memo} onSave={(memo) => onUpdate(key, { memo })} />
       </div>
     </li>
   )

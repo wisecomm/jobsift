@@ -116,4 +116,30 @@ describe('scorePending', () => {
     expect(await scorePending(store, deps(log, scorer(log)))).toEqual({ scored: 0, kept: 0, lowScore: 0, pendingLeft: 0, error: null })
     expect(log).toEqual([])
   })
+
+  it('saves apportioned token usage onto kept postings and accumulates exact batch totals via onUsage', async () => {
+    const store = await freshStore()
+    for (let i = 1; i <= 12; i++) await store.putPending(pending(i))
+    const usageEvents: { count: number; totalTokens: number }[] = []
+    const scoreWithUsage: ScoreFn = async (items) => ({
+      kind: 'ok',
+      scores: items.map((item) => ({ index: item.index, score: 80, reason: '적합' })),
+      usage: { inputTokens: 100, outputTokens: 50, thoughtTokens: 50, cachedTokens: 0, totalTokens: 200 },
+    })
+    const pass = await scorePending(store, {
+      ...deps([], scoreWithUsage, 60),
+      onUsage: (usage, count) => void usageEvents.push({ count, totalTokens: usage.totalTokens }),
+    })
+
+    expect(pass.usage).toEqual({ inputTokens: 200, outputTokens: 100, thoughtTokens: 100, cachedTokens: 0, totalTokens: 400 })
+    expect(pass.usageBySite).toEqual({ jobkorea: { inputTokens: 200, outputTokens: 100, thoughtTokens: 100, cachedTokens: 0, totalTokens: 400 } })
+    expect(usageEvents).toEqual([
+      { count: 10, totalTokens: 200 },
+      { count: 2, totalTokens: 200 },
+    ])
+    const p1 = await store.getPosting({ site: 'jobkorea', externalId: '1' })
+    const p12 = await store.getPosting({ site: 'jobkorea', externalId: '12' })
+    expect(p1?.tokenUsage).toEqual({ inputTokens: 10, outputTokens: 5, thoughtTokens: 5, cachedTokens: 0, totalTokens: 20, batchSize: 10 })
+    expect(p12?.tokenUsage).toEqual({ inputTokens: 50, outputTokens: 25, thoughtTokens: 25, cachedTokens: 0, totalTokens: 100, batchSize: 2 })
+  })
 })

@@ -29,6 +29,7 @@ export interface Store {
   knownIds(site: string): Promise<Set<string>>
 
   getCollectState(site: string, keyword: string): Promise<CollectState | undefined>
+  listCollectStates(site?: string): Promise<CollectState[]>
   putCollectState(state: CollectState): Promise<void>
 
   clearDiscards(): Promise<void>
@@ -145,6 +146,7 @@ export async function openStore(name = DB_NAME): Promise<Store> {
     },
 
     getCollectState: (site, keyword) => db.get('collectState', [site, keyword]),
+    listCollectStates: (site) => db.getAll('collectState', site === undefined ? undefined : siteRange(site)),
     putCollectState: async (state) => void (await db.put('collectState', state)),
 
     clearDiscards: () => db.clear('discards'),

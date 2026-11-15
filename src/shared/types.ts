@@ -2,10 +2,8 @@ export type CareerFilter = 'any' | 'new' | 'experienced'
 
 export interface SearchCriteria {
   keywords: string[]
-  excludeKeywords: string[]
   locations: string[]
   career: CareerFilter
-  initialDays: number
   description: string
 }
 
@@ -43,7 +41,6 @@ export type UpdateResult = { kind: 'updated'; posting: StoredPosting } | { kind:
 
 export type RejectReason =
   | { gate: 'expired' }
-  | { gate: 'excludeKeyword'; keyword: string }
   | { gate: 'keywordMismatch' }
   | { gate: 'location' }
   | { gate: 'career' }
@@ -59,12 +56,37 @@ export interface PostingSource {
   url: string
 }
 
+export interface TokenUsage {
+  inputTokens: number
+  outputTokens: number
+  thoughtTokens: number
+  cachedTokens: number
+  totalTokens: number
+}
+
+export interface PostingTokenUsage extends TokenUsage {
+  batchSize: number
+}
+
+export interface AiModelUsage extends TokenUsage {
+  requests: number
+}
+
+export interface AiUsageRecord {
+  requests: number
+  scoredPostings: number
+  totals: TokenUsage
+  byModel: Record<string, AiModelUsage>
+  updatedAt: string | null
+}
+
 export interface StoredPosting extends JobPosting {
   status: PostingStatus
   memo: string
   matchedKeywords: string[]
   score: number | null
   scoreReason: string | null
+  tokenUsage?: PostingTokenUsage
   collectedAt: string
   updatedAt: string
   /** Other sites where the same posting was collected (Q31). */
@@ -92,27 +114,43 @@ export interface DiscardRecord {
   deadline: string | null
 }
 
+export interface CollectResume {
+  nextPage: number
+  cutoff: string | null
+}
+
 export interface CollectState {
   site: string
   keyword: string
   lastCollectedAt: string
+  resume?: CollectResume
 }
 
 export type PostingKey = Pick<JobPosting, 'site' | 'externalId'>
 
 export type StopReason = 'cutoff' | 'known' | 'exhausted' | 'page-cap' | 'error'
 
+export type AiProvider = 'gemini' | 'exaone'
+
 export interface AiSettings {
+  provider?: AiProvider
   apiKey: string
   model: string
+  /** Saved keys per provider so switching providers preserves each key. */
+  keys?: Partial<Record<AiProvider, string>>
+  /** Saved model overrides per provider. */
+  models?: Partial<Record<AiProvider, string>>
   /** 0 to 100. */
   minScore: number
 }
 
-/** What the page may see: never the key itself. */
+/** What the page may see: never the keys themselves. */
 export interface AiSettingsView {
+  provider: AiProvider
   hasKey: boolean
   model: string
+  hasKeyByProvider: Record<AiProvider, boolean>
+  modelsByProvider: Record<AiProvider, string>
   minScore: number
 }
 
@@ -121,6 +159,7 @@ export interface ScoringSummary {
   kept: number
   lowScore: number
   pendingLeft: number
+  usage?: TokenUsage
   /** Korean message for the batch that stopped the pass, if one did. */
   error: string | null
 }
@@ -137,12 +176,18 @@ export interface CollectionSummary {
   expiredMarked: number
   stopReasons: Record<string, StopReason>
   errors: Record<string, string>
+  /** Keyword scan cap applied for this site, if configured. */
+  maxItems?: number
+  /** AI tokens consumed for this site during this run, when AI scoring ran. */
+  tokenUsage?: TokenUsage
 }
 
 /** The sites collection uses. Always holds at least one id of an available adapter. */
 export interface SiteSettings {
   enabledSites: string[]
   siteOrder: string[]
+  /** Per-site keyword scan cap (in postings). Defaults to 2000 when omitted. */
+  maxItemsBySite?: Record<string, number>
 }
 
 export type SiteRunResult = { kind: 'ok'; summary: CollectionSummary } | { kind: 'error'; message: string }

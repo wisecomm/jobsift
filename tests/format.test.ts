@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { careerLabel } from '../src/shared/career'
-import { deadlineLabel, locationSummary, reportLines, runStatusLine, scoringLine, stopNotices, summaryLine } from '../src/page/format'
+import { deadlineLabel, locationSummary, reportLines, reportNotices, runStatusLine, scoringLine, stopNotices, summaryLine } from '../src/page/format'
 import { SAMPLE_DESCRIPTIONS } from '../src/page/sampleDescriptions'
 import type { CollectionReport, CollectionSummary } from '../src/shared/types'
 
@@ -51,15 +51,16 @@ describe('locationSummary', () => {
 describe('stopNotices', () => {
   const summary = (over: Partial<CollectionSummary>): CollectionSummary => ({
     scanned: 0, saved: 0, queued: 0, aiOn: false, discarded: 0, expiredMarked: 0, errors: {}, stopReasons: {},
-    discardedByGate: { expired: 0, excludeKeyword: 0, keywordMismatch: 0, location: 0, career: 0, lowScore: 0 },
+    discardedByGate: { expired: 0, keywordMismatch: 0, location: 0, career: 0, lowScore: 0 },
     ...over,
   })
 
-  it('reports only page-cap and error stops', () => {
-    const notices = stopNotices(summary({ stopReasons: { 전산: 'page-cap', 회계: 'error', 총무: 'known', 인사: 'cutoff' }, errors: { 회계: '요청 실패 (500)' } }))
-    expect(notices).toHaveLength(2)
-    expect(notices[0]).toContain('전산')
-    expect(notices[1]).toContain('요청 실패 (500)')
+  it('reports only page-cap (collapsed per site) and error stops, including configured maxItems', () => {
+    const notices = stopNotices(summary({ stopReasons: { 전산: 'page-cap', 개발: 'page-cap', 회계: 'error', 총무: 'known', 인사: 'cutoff' }, errors: { 회계: '요청 실패 (500)' }, maxItems: 1200 }))
+    expect(notices).toEqual([
+      '최대 수집 개수(1,200건)를 넘어 멈춰 마감 전 공고를 다 보지 못했을 수 있습니다.',
+      '"회계": 수집 중 오류가 나서 중단했습니다. 요청 실패 (500)',
+    ])
   })
 })
 
@@ -72,7 +73,7 @@ describe('SAMPLE_DESCRIPTIONS', () => {
 describe('collection and scoring lines', () => {
   const base: CollectionSummary = {
     scanned: 25, saved: 0, queued: 25, aiOn: false, discarded: 0, expiredMarked: 0, errors: {}, stopReasons: {},
-    discardedByGate: { expired: 0, excludeKeyword: 0, keywordMismatch: 0, location: 0, career: 0, lowScore: 0 },
+    discardedByGate: { expired: 0, keywordMismatch: 0, location: 0, career: 0, lowScore: 0 },
   }
 
   it('says saved in rules-only mode and queued in AI mode', () => {
@@ -80,15 +81,25 @@ describe('collection and scoring lines', () => {
     expect(summaryLine({ ...base, aiOn: true })).toContain('채점 대기열에 25건 추가')
   })
 
-  it('reports scored, kept, low-score and pending counts', () => {
+  it('reports scored, kept, low-score and pending counts, plus token usage when present', () => {
     expect(scoringLine({ scored: 20, kept: 9, lowScore: 11, pendingLeft: 5, error: null })).toBe('AI 채점: 20건 채점 · 저장 9건 · 점수 미달 11건 · 채점 대기 5건')
+    expect(
+      scoringLine({
+        scored: 10,
+        kept: 4,
+        lowScore: 6,
+        pendingLeft: 0,
+        usage: { inputTokens: 1200, outputTokens: 350, thoughtTokens: 450, cachedTokens: 0, totalTokens: 2000 },
+        error: null,
+      }),
+    ).toBe('AI 채점: 10건 채점 · 저장 4건 · 점수 미달 6건 · 채점 대기 0건 · 토큰 2,000 (입력 1,200 · 출력 350 · 사고 450)')
   })
 })
 
 describe('multi-site report', () => {
   const summary = (scanned: number, saved: number): CollectionSummary => ({
     scanned, saved, queued: 0, aiOn: false, discarded: 0, expiredMarked: 0, errors: {}, stopReasons: {},
-    discardedByGate: { expired: 0, excludeKeyword: 0, keywordMismatch: 0, location: 0, career: 0, lowScore: 0 },
+    discardedByGate: { expired: 0, keywordMismatch: 0, location: 0, career: 0, lowScore: 0 },
   })
   const name = (site: string) => ({ a: '가', b: '나' })[site] ?? site
   const run = (site: string, s: CollectionSummary) => ({ site, at: '2026-11-13T10:00:00Z', result: { kind: 'ok' as const, summary: s } })
@@ -114,9 +125,46 @@ describe('multi-site report', () => {
     expect(lines.notices).toEqual(['나: 수집하지 못했습니다. 끊김'])
   })
 
-  it('describes the last run on a site row in Korean time', () => {
+  it('describes the last run on a site row in Korean time and includes total tokens when AI is on', () => {
     expect(runStatusLine(undefined)).toBe('아직 수집한 적이 없습니다.')
     expect(runStatusLine(run('a', summary(5, 2)))).toMatch(/^2026-11-13 19:00 · 확인 5건 · 저장 2건/)
+    expect(runStatusLine(run('a', summary(5, 2)))).not.toContain('총 토큰')
+    expect(
+      runStatusLine(
+        run('a', {
+          ...summary(5, 0),
+          aiOn: true,
+          queued: 2,
+          tokenUsage: { inputTokens: 800, outputTokens: 200, thoughtTokens: 234, cachedTokens: 0, totalTokens: 1234 },
+        }),
+      ),
+    ).toContain('· 총 토큰 1,234')
+    expect(runStatusLine(run('a', { ...summary(5, 0), aiOn: true }))).toContain('· 총 토큰 0')
     expect(runStatusLine({ site: 'a', at: '2026-11-13T10:00:00Z', result: { kind: 'error', message: '끊김' } })).toBe('2026-11-13 19:00 · 수집하지 못했습니다. 끊김')
+  })
+
+  it('collapses multiple page-cap keywords into one site-prefixed notice and surfaces remaining sites', () => {
+    const report: CollectionReport = {
+      runs: [
+        run('a', {
+          ...summary(10, 5),
+          maxItems: 10,
+          stopReasons: { 전산: 'page-cap', 개발: 'page-cap', 회계: 'exhausted' },
+        }),
+      ],
+      scoring: null,
+    }
+    expect(reportNotices(report, name, { a: ['전산', '개발'], b: ['인사'] })).toEqual([
+      {
+        site: 'a',
+        continuable: true,
+        text: '가 : 최대 수집 개수(10건)를 넘어 멈춰 마감 전 공고를 다 보지 못했을 수 있습니다.',
+      },
+      {
+        site: 'b',
+        continuable: true,
+        text: '나 : 최대 수집 개수를 넘어 멈춰 남은 마감 전 공고를 계속 수집할 수 있습니다.',
+      },
+    ])
   })
 })

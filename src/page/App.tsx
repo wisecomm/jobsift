@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AiInput } from '../ai/settings'
-import { LAST_SITE_MESSAGE, moveSite, toggleSite } from '../engine/siteSettings'
+import { LAST_SITE_MESSAGE, moveSite, setSiteMaxItems, toggleSite } from '../engine/siteSettings'
 import type { SiteSettingsView } from '../shared/messages'
-import type { AiSettingsView, CollectionReport, PostingKey, PostingPatch, ScoringSummary, SearchCriteria, StoredPosting } from '../shared/types'
+import type { AiSettingsView, AiUsageRecord, CollectionReport, PostingKey, PostingPatch, ScoringSummary, SearchCriteria, StoredPosting } from '../shared/types'
 import { send, updatePosting } from './api'
+import { DEFAULT_BATCH_HOURS, clampBatchHours, nextBatchRunAt, shouldTriggerBatch } from './batchSchedule'
 import { Header } from './Header'
 import { PostingsView } from './PostingsView'
 import { SettingsView } from './SettingsView'
@@ -19,26 +20,36 @@ export function App() {
   const [criteria, setCriteria] = useState<SearchCriteria | null>(null)
   const [postings, setPostings] = useState<StoredPosting[]>([])
   const [ai, setAi] = useState<AiSettingsView | null>(null)
+  const [aiUsage, setAiUsage] = useState<AiUsageRecord | null>(null)
   const [pending, setPending] = useState(0)
   const [sites, setSites] = useState<SiteSettingsView | null>(null)
   const [report, setReport] = useState<CollectionReport | null>(null)
   const [scoring, setScoring] = useState<ScoringSummary | null>(null)
   const [busy, setBusy] = useState(false)
+  const [progress, setProgress] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [batchEnabled, setBatchEnabled] = useState(false)
+  const [batchHours, setBatchHours] = useState(DEFAULT_BATCH_HOURS)
+  const [nextBatchAt, setNextBatchAt] = useState<number | null>(null)
 
   useEffect(() => {
     void (async () => {
       try {
-        const [saved, savedAi, list, waiting, siteState] = await Promise.all([
+        const [saved, savedAi, usage, list, waiting, siteState] = await Promise.all([
           send({ type: 'getCriteria' }),
           send({ type: 'getAiSettings' }),
+          send({ type: 'getAiUsage' }),
           send({ type: 'listPostings' }),
           send({ type: 'pendingCount' }),
           send({ type: 'getSiteSettings' }),
         ])
+        if (usage === undefined) {
+          setError('확장 프로그램 백그라운드가 이전 버전입니다. chrome://extensions에서 확장 프로그램을 새로고침(↻)한 뒤 이 탭도 새로고침해 주세요.')
+        }
         setSites(siteState)
         setCriteria(saved)
         setAi(savedAi)
+        setAiUsage(usage ?? null)
         setPostings(list)
         setPending(waiting)
         setTab(saved.keywords.length === 0 ? 'settings' : 'postings')
@@ -49,14 +60,21 @@ export function App() {
   }, [])
 
   const refresh = useCallback(async () => {
-    const [list, waiting, siteState] = await Promise.all([send({ type: 'listPostings' }), send({ type: 'pendingCount' }), send({ type: 'getSiteSettings' })])
+    const [list, waiting, siteState, usage] = await Promise.all([
+      send({ type: 'listPostings' }),
+      send({ type: 'pendingCount' }),
+      send({ type: 'getSiteSettings' }),
+      send({ type: 'getAiUsage' }),
+    ])
     setPostings(list)
     setPending(waiting)
     setSites(siteState)
+    setAiUsage(usage)
   }, [])
 
   async function work(task: () => Promise<void>) {
     setBusy(true)
+    setProgress(null)
     setError(null)
     try {
       await task()
@@ -64,43 +82,64 @@ export function App() {
     } catch (e) {
       setError(errorText(e))
     } finally {
+      setProgress(null)
       setBusy(false)
     }
   }
 
   const collectNow = () =>
     work(async () => {
-      const result = await send({ type: 'collect' })
+      const result = await send({ type: 'collect' }, setProgress)
       setReport(result)
       setScoring(result.scoring)
     })
 
   const collectSite = (site: string) =>
     work(async () => {
-      const result = await send({ type: 'collect', site })
+      const result = await send({ type: 'collect', site }, setProgress)
       setReport(result)
       setScoring(result.scoring)
     })
+
+  const continueCollect = (site: string, keyword?: string) =>
+    work(async () => {
+      const result = await send({ type: 'collect', site, keyword, continueFromCap: true }, setProgress)
+      setReport(result)
+      setScoring(result.scoring)
+    })
+
+  async function persistSiteSettings(next: NonNullable<typeof sites>['settings']) {
+    if (!sites) return
+    const settings = await send({
+      type: 'saveSiteSettings',
+      enabledSites: next.enabledSites,
+      siteOrder: next.siteOrder,
+      maxItemsBySite: next.maxItemsBySite,
+    })
+    setSites({ ...sites, settings })
+  }
 
   async function toggleSiteOn(id: string, on: boolean) {
     if (!sites) return
     const next = toggleSite(sites.settings, id, on)
     if (next.kind === 'last-site') throw new Error(LAST_SITE_MESSAGE)
-    const settings = await send({ type: 'saveSiteSettings', enabledSites: next.settings.enabledSites, siteOrder: next.settings.siteOrder })
-    setSites({ ...sites, settings })
+    await persistSiteSettings(next.settings)
   }
 
   async function moveSiteOrder(id: string, direction: 'up' | 'down') {
     if (!sites) return
     const next = moveSite(sites.settings, id, direction)
-    if (next === sites.settings) return
-    const settings = await send({ type: 'saveSiteSettings', enabledSites: next.enabledSites, siteOrder: next.siteOrder })
-    setSites({ ...sites, settings })
+    if (next !== sites.settings) await persistSiteSettings(next)
+  }
+
+  async function updateSiteMaxItems(id: string, maxItems: number) {
+    if (!sites) return
+    await persistSiteSettings(setSiteMaxItems(sites.settings, id, maxItems))
   }
 
   const scoreWaiting = () =>
     work(async () => {
-      setScoring(await send({ type: 'scorePending' }))
+      setScoring(await send({ type: 'scorePending' }, setProgress))
     })
 
   async function reloadSettings() {
@@ -118,24 +157,39 @@ export function App() {
     return changed ? `설정을 저장했습니다.${removedNote(removed)}${queuedNote(queued)}` : '설정을 저장했습니다.'
   }
 
-  async function deleteKey(): Promise<string> {
-    const { removed } = await send({ type: 'deleteAiKey' })
+  async function deleteKey(provider: NonNullable<typeof ai>['provider']): Promise<string> {
+    const { removed } = await send({ type: 'deleteAiKey', provider })
     await reloadSettings()
-    return `키를 삭제했습니다. 이제 키워드 규칙만으로 공고를 모읍니다.${removedNote(removed)}`
+    const label = provider === 'exaone' ? 'EXAONE' : 'Gemini'
+    return `${label} 키를 삭제했습니다.${removedNote(removed)}`
   }
 
-  async function checkKey(apiKey: string, model: string): Promise<string> {
-    const result = await send({ type: 'checkAiKey', apiKey, model })
+  async function checkKey(provider: NonNullable<typeof ai>['provider'], apiKey: string, model: string): Promise<string> {
+    const result = await send({ type: 'checkAiKey', provider, apiKey, model })
     if (!result.ok) throw new Error(result.message)
     return '키가 정상적으로 동작합니다.'
   }
 
+  async function clearUsage(): Promise<string> {
+    setAiUsage(await send({ type: 'clearAiUsage' }))
+    return '누적 토큰 사용량 기록을 초기화했습니다.'
+  }
+
   const resetCollect = () =>
     work(async () => {
-      const result = await send({ type: 'resetCollect' })
+      setPostings([])
+      setPending(0)
+      setReport(null)
+      setScoring(null)
+      const result = await send({ type: 'resetCollect' }, setProgress)
       setReport(result)
       setScoring(result.scoring)
     })
+
+  const cancelWork = () => {
+    setProgress('중단 요청 중…')
+    void send({ type: 'cancelWork' }).catch(() => undefined)
+  }
 
   async function patchPosting(key: PostingKey, patch: PostingPatch) {
     setError(null)
@@ -149,18 +203,63 @@ export function App() {
   }
 
   const hasCriteria = (criteria?.keywords.length ?? 0) > 0
+  const collectNowRef = useRef(collectNow)
+  collectNowRef.current = collectNow
+  const wasBusyRef = useRef(false)
+
+  const toggleBatch = (enabled: boolean) => {
+    setBatchEnabled(enabled)
+    setNextBatchAt(enabled ? nextBatchRunAt(Date.now(), batchHours) : null)
+  }
+
+  const changeBatchHours = (raw: number) => {
+    const hours = clampBatchHours(raw)
+    setBatchHours(hours)
+    if (batchEnabled) setNextBatchAt(nextBatchRunAt(Date.now(), hours))
+  }
+
+  useEffect(() => {
+    const finishedRun = wasBusyRef.current && !busy
+    wasBusyRef.current = busy
+    if (finishedRun && batchEnabled) setNextBatchAt(nextBatchRunAt(Date.now(), batchHours))
+  }, [busy, batchEnabled, batchHours])
+
+  useEffect(() => {
+    if (!batchEnabled || !hasCriteria || busy) return
+    const check = () => {
+      if (shouldTriggerBatch({ enabled: batchEnabled, busy, canCollect: hasCriteria, nowMs: Date.now(), nextRunAt: nextBatchAt })) {
+        setNextBatchAt(nextBatchRunAt(Date.now(), batchHours))
+        void collectNowRef.current()
+      }
+    }
+    const id = window.setInterval(check, 15_000)
+    document.addEventListener('visibilitychange', check)
+    return () => {
+      window.clearInterval(id)
+      document.removeEventListener('visibilitychange', check)
+    }
+  }, [batchEnabled, batchHours, busy, hasCriteria, nextBatchAt])
 
   return (
     <div className="app">
       <Header
         busy={busy}
         canCollect={hasCriteria}
+        progress={progress}
         report={report}
         scoring={scoring}
         pending={pending}
+        resumableBySite={sites?.resumableBySite}
+        batchEnabled={batchEnabled}
+        batchHours={batchHours}
+        nextBatchAt={nextBatchAt}
+        onToggleBatch={toggleBatch}
+        onChangeBatchHours={changeBatchHours}
         onCollect={() => void collectNow()}
+        onContinueCollect={(site, keyword) => void continueCollect(site, keyword)}
         onResetCollect={() => void resetCollect()}
         onScorePending={() => void scoreWaiting()}
+        onCancel={cancelWork}
       />
       {error && (
         <p role="alert" className="banner warn">
@@ -185,10 +284,27 @@ export function App() {
               <PostingsView postings={postings} hasCriteria={hasCriteria} siteOrder={sites.settings.siteOrder} onUpdate={(k, p) => void patchPosting(k, p)} onOpenSettings={() => setTab('settings')} />
             </div>
             <div hidden={tab !== 'settings'}>
-              <SettingsView criteria={criteria} ai={ai} onSave={saveSettings} onDeleteKey={deleteKey} onCheckKey={checkKey} />
+              <SettingsView
+                criteria={criteria}
+                ai={ai}
+                aiUsage={aiUsage}
+                onSave={saveSettings}
+                onDeleteKey={deleteKey}
+                onCheckKey={checkKey}
+                onClearAiUsage={clearUsage}
+              />
             </div>
             <div hidden={tab !== 'sites'}>
-              <SitesView state={sites} busy={busy} canCollect={hasCriteria} onToggle={toggleSiteOn} onMove={moveSiteOrder} onCollectSite={(id) => void collectSite(id)} />
+              <SitesView
+                state={sites}
+                busy={busy}
+                canCollect={hasCriteria}
+                onToggle={toggleSiteOn}
+                onMove={moveSiteOrder}
+                onUpdateMaxItems={updateSiteMaxItems}
+                onCollectSite={(id) => void collectSite(id)}
+                onContinueSite={(id, keyword) => void continueCollect(id, keyword)}
+              />
             </div>
           </main>
         </>

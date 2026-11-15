@@ -1,13 +1,16 @@
 {
-  "name": "kr-job-finder-extension",
+  "name": "jobsift",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "pack": "npm run build && rm -f jobsift-store.zip && (cd dist && zip -r ../jobsift-store.zip .)",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "verify:workflow": "vitest run tests/classificationWorkflow.test.ts",
+    "verify": "npm run typecheck && npm test && npm run build",
     "collect:live": "tsx scripts/collect-live.ts"
   },
   "dependencies": {

@@ -127,6 +127,27 @@ describe('runAllSites with AI on', () => {
     expect(await store.listPending()).toEqual([])
   })
 
+  it('attaches per-site tokenUsage to each ok site summary when AI scoring reports usage', async () => {
+    const store = await freshStore()
+    const w = web({ [JK]: items([1, 2]), [SECOND]: items([3]) })
+    const scoring = {
+      minScore: 0,
+      now: NOW,
+      pace: async () => {},
+      score: async (batch: ScoreItem[]) => ({
+        kind: 'ok' as const,
+        scores: batch.map((i) => ({ index: i.index, score: 80, reason: '적합' })),
+        usage: { inputTokens: 300, outputTokens: 90, thoughtTokens: 60, cachedTokens: 0, totalTokens: 450 },
+      }),
+    }
+
+    const report = await runAllSites([first, second], criteria(), store, { ...w.deps, scoring })
+    const jkSummary = report.runs[0]?.result.kind === 'ok' ? report.runs[0].result.summary : null
+    const secSummary = report.runs[1]?.result.kind === 'ok' ? report.runs[1].result.summary : null
+    expect(jkSummary?.tokenUsage).toEqual({ inputTokens: 200, outputTokens: 60, thoughtTokens: 40, cachedTokens: 0, totalTokens: 300 })
+    expect(secSummary?.tokenUsage).toEqual({ inputTokens: 100, outputTokens: 30, thoughtTokens: 20, cachedTokens: 0, totalTokens: 150 })
+  })
+
   it('on a failed first pass, still collects every site and leaves all of it queued', async () => {
     const store = await freshStore()
     await store.putPending(waiting('jobkorea', 90))

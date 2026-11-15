@@ -15,10 +15,9 @@ describe('buildInstruction', () => {
     expect(text).toBe('공공기관에서 전산 운영을 하고 싶습니다.')
   })
 
-  it('falls back to keywords, exclude keywords and career when the description is empty', () => {
-    const text = buildInstruction(criteria({ description: ' ', keywords: ['전산', '회계'], excludeKeywords: ['영업'], career: 'new' }))
+  it('falls back to keywords and career when the description is empty', () => {
+    const text = buildInstruction(criteria({ description: ' ', keywords: ['전산', '회계'], career: 'new' }))
     expect(text).toContain('전산, 회계')
-    expect(text).toContain('영업')
     expect(text).toContain('신입')
   })
 

@@ -1,16 +1,26 @@
 import { adapters } from '../adapter/registry'
+import { defaultSiteMaxItems } from '../engine/siteSettings'
 
 export const SITES_TAB_LABEL = '사이트 설정'
 
 export type SiteInfo =
-  | { availability: 'available'; id: string; name: string; homeUrl: string; requiresLogin: boolean }
+  | { availability: 'available'; id: string; name: string; homeUrl: string; requiresLogin: boolean; defaultMaxItems: number }
   | { availability: 'planned'; id: string; name: string; homeUrl: string }
 
 // Planned sites have no adapter yet, so they are display data only and never reach the worker.
 const PLANNED: SiteInfo[] = []
 
 export const SITE_LIST: SiteInfo[] = [
-  ...adapters.map(({ id, name, homeUrl, requiresLogin }): SiteInfo => ({ availability: 'available', id, name, homeUrl, requiresLogin })),
+  ...adapters.map(
+    (adapter): SiteInfo => ({
+      availability: 'available',
+      id: adapter.id,
+      name: adapter.name,
+      homeUrl: adapter.homeUrl,
+      requiresLogin: adapter.requiresLogin,
+      defaultMaxItems: defaultSiteMaxItems(adapter),
+    }),
+  ),
   ...PLANNED,
 ]
 

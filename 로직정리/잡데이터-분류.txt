@@ -1,0 +1,84 @@
+================================================================================
+잡데이터 수집 · 분류 · 저장 플로우차트 (현행화 버전)
+================================================================================
+
+핵심 모듈 (구조별)
+- 전체 조율  : src/engine/runAllSites.ts (AI 1차 채점 -> 사이트별 수집 -> AI 2차 채점)
+- 자동 배치  : src/page/App.tsx, src/page/batchSchedule.ts (상단 체크 시 N시간 주기 자동 수집)
+- 수집/파싱  : src/engine/runCollection.ts -> collect.ts -> extractPostings.ts
+- 조건 게이트: src/engine/evaluate.ts (RULE_GATES: deadline / keyword / location / career)
+- 중복/레코드: src/engine/dedup.ts, src/engine/postingRecords.ts
+- AI 채점    : src/engine/scorePending.ts -> src/ai/provider.ts (gemini.ts / exaone.ts, parseScores.ts, pacer.ts)
+               * 배치 10건 단위, 응답 완료 후 간격 대기 (Gemini 4초 / EXAONE 6초, 타임아웃 180초)
+               * EXAONE 방어: 429(혼잡) 3·6·10초 백오프 재시도, 비정형 JSON/reason 따옴표 복구,
+                              타임아웃·오류 시 절반(5+5건) 자동 분할 재시도
+- DB 저장소  : src/storage/store.ts (IndexedDB: postings / pending / discards / collectState)
+
+
+--------------------------------------------------------------------------------
+1. 전체 처리 흐름 (4단계)
+--------------------------------------------------------------------------------
+
+  [시작: 수집 요청 (collect / resetCollect / 계속 수집(continueFromCap) / 자동 배치)]
+       │  * resetCollect 시 IndexedDB 전체 및 화면(postings/pending) 즉시 0 초기화 후 수집
+       ▼
+  [1단계: 사전 AI 채점] (AI ON 일 때만)
+       └─ 이전 실행에 남은 pending 공고 먼저 채점 (scorePending, 10건마다 즉시 커밋)
+       │
+       ▼
+  [2단계: 사이트별 수집 & 파싱] (활성 사이트 순서: 기본 jobkorea -> saramin -> gojobs)
+       ├─ 사전 정리: 만료 공고('expired') 표시 + 오래된 discards 삭제
+       ├─ 기준 로드: knownIds(기존 ID) + 키워드별 cutoff + 사이트별 최대 수집 개수(maxItems, 기본 2,000건)
+       │             * 최초 수집(lastCollectedAt 없음): 최근 7일(INITIAL_LOOKBACK_DAYS=7) 기준 cutoff
+       │             * 이후 수집: 키워드별 lastCollectedAt 기준 증분 수집
+       └─ 페이지 수집: HTML/JSON 파싱 후 cutoff · known · maxItems 도달 시 중단
+                       * 이미 마감된 공고(deadline < 현재 시각)는 maxItems 카운트에서 제외
+                       * maxItems 도달 시 collectState.resume(nextPage, maxCollectedAt) 저장 후
+                         사이트별 1줄 안내 + [계속 수집] 버튼으로 멈춘 페이지부터 이어서 수집 가능
+       │
+       ▼
+  [3단계: 건별 분류 & 저장] (runCollection -> evaluate -> postingRecords)
+       │
+       ├─(A) 4대 규칙 게이트 탈락? (RULE_GATES 순서 검사)
+       │      └─[Yes]─▶ discards 저장 (사유만 기록) -> 다음 공고
+       │
+       ├─(B) 타 사이트에 동일 공고 존재? (dedupKey = 회사+제목+지역)
+       │      └─[Yes]─▶ alsoOn 출처/키워드 병합 후 기존 레코드 갱신 -> 다음 공고
+       │
+       └─(C) 신규 통과 공고 저장 분기
+              ├─ AI ON  ─▶ pending 저장 (채점 대기열)
+              └─ AI OFF ─▶ postings 저장 (status='new', score=null)
+       │
+       ▼
+  [4단계: 사후 AI 채점 & 종료] (AI ON & 1차 채점 에러 없을 때)
+       ├─ 새로 쌓인 pending 전체를 10건씩 채점 (scorePending)
+       │    ├─ score >= minScore ─▶ postings 저장 (commitScored)
+       │    └─ score <  minScore ─▶ discards 저장 (alsoOn 포함, gate='lowScore')
+       │  * 1차 채점에서 429/혼잡 등 에러가 났으면 4단계는 생략하고 pending에 보관(다음 실행/대기 채점 시 재개)
+       └─ 사이트 실행 결과(recordSiteRuns) 및 AI 토큰 사용량(recordAiUsage) 저장 후 종료
+
+
+--------------------------------------------------------------------------------
+2. 조건 게이트 구조 (src/engine/evaluate.ts -> RULE_GATES)
+--------------------------------------------------------------------------------
+
+  그룹        게이트 ID         탈락 조건
+  ----------  ----------------  --------------------------------------------
+  deadline    expired           deadline < 현재 시각
+  keyword     keywordMismatch   (AI OFF 전용) 선호 키워드가 제목/태그에 0건
+  location    location          선호 지역(시/도) 불일치 (미설정·공고지역 없으면 통과)
+  career      career            신입 <-> 경력 상충 (INCOMPATIBLE_CAREER)
+
+
+--------------------------------------------------------------------------------
+3. 저장소 상태 전이 요약 (IndexedDB: kr-job-finder)
+--------------------------------------------------------------------------------
+
+  원시 공고 ──(규칙 탈락)──────────────────▶ [discards]  (재수집 스킵용, 만료 후 정리)
+            ├─(통과 + AI OFF)──────────────▶ [postings]  (목록 표시, status='new')
+            └─(통과 + AI ON)──▶ [pending] ─┬─(score >= minScore)─▶ [postings]
+                                           └─(score <  minScore)─▶ [discards]
+
+  ※ [collectState]: (site, keyword)별 마지막 정상 수집 시각(lastCollectedAt) 및
+                     maxItems 중단 시 이어받기 커서(resume: { nextPage, maxCollectedAt }) 보관
+  ※ 검증 실행: npm run verify (또는 npm run verify:workflow)

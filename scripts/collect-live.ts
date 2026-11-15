@@ -19,7 +19,7 @@ if (!adapter) {
 }
 const result = await collect(
   adapter,
-  { keywords: [keyword], excludeKeywords: [], locations: [], career: 'any', initialDays: 7, description: '' },
+  { keywords: [keyword], locations: [], career: 'any', description: '' },
   {
     fetchHtml: async (url) => {
       console.error(`GET ${url}`)
@@ -28,7 +28,6 @@ const result = await collect(
       return response.text()
     },
     knownIds: new Set(),
-    cutoffFor: () => new Date(Date.now() - 7 * 86_400_000),
     maxPages: LIVE_MAX_PAGES,
   },
 )

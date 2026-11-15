@@ -1,8 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { loadAiSettings, mergeAiInput, normalizeAiSettings, settingsChanged, storeAiSettings, toAiView, type StorageArea } from '../src/ai/settings'
+import {
+  clearProviderKey,
+  loadAiSettings,
+  mergeAiInput,
+  normalizeAiSettings,
+  settingsChanged,
+  storeAiSettings,
+  toAiView,
+  type StorageArea,
+} from '../src/ai/settings'
+import type { AiSettings } from '../src/shared/types'
 import { criteria } from './helpers'
 
 const KEY = 'fake-key-for-local-test'
+const EXAONE_KEY = 'fake-exaone-key-for-local-test'
 
 function memoryArea(): StorageArea & { data: Record<string, unknown> } {
   const data: Record<string, unknown> = {}
@@ -13,17 +24,31 @@ function memoryArea(): StorageArea & { data: Record<string, unknown> } {
   }
 }
 
-const ai = (over: Partial<{ apiKey: string; model: string; minScore: number }> = {}) => ({ apiKey: KEY, model: 'm', minScore: 60, ...over })
+const ai = (over: Partial<AiSettings> = {}) => normalizeAiSettings({ apiKey: KEY, model: 'm', minScore: 60, ...over })
 
 describe('AI settings storage', () => {
-  it('falls back to defaults: no key, default model, minScore 60', async () => {
-    expect(await loadAiSettings(memoryArea())).toEqual({ apiKey: '', model: 'gemini-3.5-flash-lite', minScore: 60 })
+  it('falls back to defaults: gemini provider, no keys, default models, minScore 60', async () => {
+    expect(await loadAiSettings(memoryArea())).toEqual({
+      provider: 'gemini',
+      apiKey: '',
+      model: 'gemini-3.5-flash-lite',
+      keys: { gemini: '', exaone: '' },
+      models: { gemini: 'gemini-3.5-flash-lite', exaone: 'k-exaone_v2.5' },
+      minScore: 60,
+    })
   })
 
   it('round-trips and normalizes', async () => {
     const area = memoryArea()
     await storeAiSettings(area, normalizeAiSettings({ apiKey: ` ${KEY} `, model: '  ', minScore: 140.4 }))
-    expect(await loadAiSettings(area)).toEqual({ apiKey: KEY, model: 'gemini-3.5-flash-lite', minScore: 100 })
+    expect(await loadAiSettings(area)).toEqual({
+      provider: 'gemini',
+      apiKey: KEY,
+      model: 'gemini-3.5-flash-lite',
+      keys: { gemini: KEY, exaone: '' },
+      models: { gemini: 'gemini-3.5-flash-lite', exaone: 'k-exaone_v2.5' },
+      minScore: 100,
+    })
   })
 
   it('treats unreadable storage as defaults', async () => {
@@ -34,10 +59,18 @@ describe('AI settings storage', () => {
 })
 
 describe('the page view', () => {
-  it('never carries the key', () => {
-    const view = toAiView(ai())
-    expect(view).toEqual({ hasKey: true, model: 'm', minScore: 60 })
+  it('never carries any key', () => {
+    const view = toAiView(ai({ keys: { gemini: KEY, exaone: EXAONE_KEY } }))
+    expect(view).toEqual({
+      provider: 'gemini',
+      hasKey: true,
+      model: 'm',
+      hasKeyByProvider: { gemini: true, exaone: true },
+      modelsByProvider: { gemini: 'm', exaone: 'k-exaone_v2.5' },
+      minScore: 60,
+    })
     expect(JSON.stringify(view)).not.toContain(KEY)
+    expect(JSON.stringify(view)).not.toContain(EXAONE_KEY)
     expect(toAiView(ai({ apiKey: '' })).hasKey).toBe(false)
   })
 })
@@ -47,15 +80,44 @@ describe('the view built from stored settings', () => {
     const area = memoryArea()
     await storeAiSettings(area, mergeAiInput(await loadAiSettings(area), { apiKey: KEY, model: '', minScore: 55 }))
     const view = toAiView(await loadAiSettings(area))
-    expect(view).toEqual({ hasKey: true, model: 'gemini-3.5-flash-lite', minScore: 55 })
+    expect(view).toEqual({
+      provider: 'gemini',
+      hasKey: true,
+      model: 'gemini-3.5-flash-lite',
+      hasKeyByProvider: { gemini: true, exaone: false },
+      modelsByProvider: { gemini: 'gemini-3.5-flash-lite', exaone: 'k-exaone_v2.5' },
+      minScore: 55,
+    })
     expect(JSON.stringify(view)).not.toContain(KEY)
   })
 })
 
-describe('mergeAiInput', () => {
+describe('mergeAiInput and clearProviderKey', () => {
   it('keeps the saved key when the key field is empty, and replaces it otherwise', () => {
     expect(mergeAiInput(ai(), { apiKey: '', model: 'n', minScore: 70 })).toEqual(ai({ model: 'n', minScore: 70 }))
     expect(mergeAiInput(ai(), { apiKey: ' new-key ', model: 'm', minScore: 60 }).apiKey).toBe('new-key')
+  })
+
+  it('stores and clears Gemini and EXAONE keys independently when switching the active default provider', () => {
+    const withGemini = mergeAiInput(ai({ apiKey: '' }), { provider: 'gemini', apiKey: KEY, model: '', minScore: 60 })
+    const withExaoneDefault = mergeAiInput(withGemini, { provider: 'exaone', apiKey: EXAONE_KEY, model: '', minScore: 65 })
+    expect(withExaoneDefault).toMatchObject({
+      provider: 'exaone',
+      apiKey: EXAONE_KEY,
+      model: 'k-exaone_v2.5',
+      keys: { gemini: KEY, exaone: EXAONE_KEY },
+      models: { gemini: 'gemini-3.5-flash-lite', exaone: 'k-exaone_v2.5' },
+      minScore: 65,
+    })
+
+    const backToGemini = mergeAiInput(withExaoneDefault, { provider: 'gemini', apiKey: '', model: '', minScore: 65 })
+    expect(backToGemini.provider).toBe('gemini')
+    expect(backToGemini.apiKey).toBe(KEY)
+    expect(backToGemini.keys?.exaone).toBe(EXAONE_KEY)
+
+    const clearedExaone = clearProviderKey(backToGemini, 'exaone')
+    expect(clearedExaone.keys).toEqual({ gemini: KEY, exaone: '' })
+    expect(clearedExaone.apiKey).toBe(KEY)
   })
 })
 

@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { parseAdapter } from '../src/adapter/schema'
 import {
+  DEFAULT_MAX_ITEMS,
+  defaultSiteMaxItems,
   loadSiteSettings,
   moveSite,
   parseSiteSettings,
   selectAdaptersForRun,
+  setSiteMaxItems,
+  siteMaxItems,
   storeSiteSettings,
   toggleSite,
 } from '../src/engine/siteSettings'
@@ -101,5 +105,24 @@ describe('selectAdaptersForRun', () => {
     const settings = { enabledSites: ['third', 'jobkorea'], siteOrder: ['third', 'second', 'jobkorea'] }
     expect(selectAdaptersForRun(adapters, undefined, settings).map((a) => a.id)).toEqual(['third', 'jobkorea'])
     expect(selectAdaptersForRun(adapters, 'second', settings).map((a) => a.id)).toEqual(['second'])
+  })
+})
+
+describe('per-site maxItems', () => {
+  it('defaults to 2000 and allows overriding per site', () => {
+    const base = { enabledSites: ALL, siteOrder: ALL }
+    expect(DEFAULT_MAX_ITEMS).toBe(2000)
+    expect(defaultSiteMaxItems(first)).toBe(2000)
+    expect(siteMaxItems(first, base)).toBe(2000)
+
+    const updated = setSiteMaxItems(base, 'jobkorea', 250)
+    expect(siteMaxItems(first, updated)).toBe(250)
+    expect(siteMaxItems(second, updated)).toBe(2000)
+
+    expect(parseSiteSettings({ enabledSites: ALL, maxItemsBySite: { jobkorea: 250.4, unknown: 100, second: 0 } }, ALL)).toEqual({
+      enabledSites: ALL,
+      siteOrder: ALL,
+      maxItemsBySite: { jobkorea: 250 },
+    })
   })
 })

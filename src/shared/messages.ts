@@ -1,6 +1,8 @@
 import type { AiInput } from '../ai/settings'
 import type {
+  AiProvider,
   AiSettingsView,
+  AiUsageRecord,
   CollectionReport,
   PostingKey,
   PostingPatch,
@@ -15,21 +17,24 @@ import type {
 export type Request =
   | { type: 'getCriteria' }
   | { type: 'getAiSettings' }
+  | { type: 'getAiUsage' }
+  | { type: 'clearAiUsage' }
   /** An empty `ai.apiKey` keeps the saved key. */
   | { type: 'saveSettings'; criteria: SearchCriteria; ai: AiInput }
-  | { type: 'deleteAiKey' }
+  | { type: 'deleteAiKey'; provider?: AiProvider }
   /** An empty `apiKey` checks the saved key. */
-  | { type: 'checkAiKey'; apiKey: string; model: string }
+  | { type: 'checkAiKey'; provider?: AiProvider; apiKey: string; model: string }
   | { type: 'getSiteSettings' }
   /** Refused when it would leave no site on. */
-  | { type: 'saveSiteSettings'; enabledSites: string[]; siteOrder?: string[] }
-  /** Without `site`, every enabled site; with it, that site only. */
-  | { type: 'collect'; site?: string }
+  | { type: 'saveSiteSettings'; enabledSites: string[]; siteOrder?: string[]; maxItemsBySite?: Record<string, number> }
+  /** Without `site`, every enabled site; with it, that site only. When `continueFromCap`, resumes from saved page-cap cursor. */
+  | { type: 'collect'; site?: string; keyword?: string; continueFromCap?: boolean }
   | { type: 'scorePending' }
   | { type: 'pendingCount' }
   | { type: 'listPostings' }
   | { type: 'updatePosting'; key: PostingKey; patch: PostingPatch }
   | { type: 'resetCollect' }
+  | { type: 'cancelWork' }
 
 export interface SettingsResult {
   changed: boolean
@@ -43,11 +48,15 @@ export interface SiteSettingsView {
   settings: SiteSettings
   /** Latest run per site id. */
   runs: Record<string, SiteRunStatus>
+  /** Resumable keywords per site that stopped at maxItems. */
+  resumableBySite?: Record<string, string[]>
 }
 
 export interface ResponseData {
   getCriteria: SearchCriteria
   getAiSettings: AiSettingsView
+  getAiUsage: AiUsageRecord
+  clearAiUsage: AiUsageRecord
   saveSettings: SettingsResult
   deleteAiKey: SettingsResult
   checkAiKey: { ok: true } | { ok: false; message: string }
@@ -59,6 +68,7 @@ export interface ResponseData {
   listPostings: StoredPosting[]
   updatePosting: UpdateResult
   resetCollect: CollectionReport
+  cancelWork: boolean
 }
 
 export type ResponseFor<R extends Request> = { ok: true; data: ResponseData[R['type']] } | { ok: false; error: string }

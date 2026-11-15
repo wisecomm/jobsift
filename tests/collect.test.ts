@@ -91,10 +91,36 @@ describe('collect', () => {
     expect(result.stopReasons).toEqual({ 전산: 'page-cap' })
   })
 
+  it('stops at maxItems when more postings remain, and finishes as exhausted when totalPages ends exactly at the limit', async () => {
+    const page1Items = Array.from({ length: 20 }, (_, i) => ({ id: String(i + 1), createdAt: hoursAgo(i + 1) }))
+    const page2Items = Array.from({ length: 20 }, (_, i) => ({ id: String(i + 21), createdAt: hoursAgo(i + 21) }))
+    const sMore = server({
+      [pageUrl('전산', 1)]: fakePage(page1Items, 5),
+      [pageUrl('전산', 2)]: fakePage(page2Items, 5),
+    })
+    const capped = await collect(adapter, criteria(), { ...sMore.deps, maxItems: 25 })
+    expect(capped.postings).toHaveLength(25)
+    expect(capped.stopReasons).toEqual({ 전산: 'page-cap' })
+
+    const sExact = server({ [pageUrl('전산', 1)]: fakePage(page1Items, 1) })
+    const exact = await collect(adapter, criteria(), { ...sExact.deps, maxItems: 20 })
+    expect(exact.postings).toHaveLength(20)
+    expect(exact.stopReasons).toEqual({ 전산: 'exhausted' })
+  })
+
   it('stops when a page comes back empty', async () => {
     const s = server({ [pageUrl('전산', 1)]: fakePage([], 99) })
     const result = await collect(adapter, criteria(), s.deps)
     expect(result.postings).toEqual([])
+    expect(result.stopReasons).toEqual({ 전산: 'exhausted' })
+  })
+
+  it('collects without a date cutoff when cutoffFor returns null', async () => {
+    const s = server({
+      [pageUrl('전산', 1)]: fakePage([{ id: '1', createdAt: hoursAgo(24 * 90) }], 1),
+    })
+    const result = await collect(adapter, criteria(), { ...s.deps, cutoffFor: () => null })
+    expect(result.postings.map((p) => p.externalId)).toEqual(['1'])
     expect(result.stopReasons).toEqual({ 전산: 'exhausted' })
   })
 
@@ -106,5 +132,51 @@ describe('collect', () => {
       maxPages: 1,
     })
     expect(result.postings).toHaveLength(20)
+  })
+
+  it('reports page progress and stops cleanly when aborted mid-scan', async () => {
+    const ac = new AbortController()
+    const pages: number[] = []
+    const s = server({
+      [pageUrl('전산', 1)]: fakePage([{ id: '1', createdAt: hoursAgo(1) }], 5),
+      [pageUrl('전산', 2)]: fakePage([{ id: '2', createdAt: hoursAgo(2) }], 5),
+    })
+    const result = await collect(adapter, criteria(), {
+      ...s.deps,
+      signal: ac.signal,
+      onProgress: ({ page }) => {
+        pages.push(page)
+        if (page === 2) ac.abort()
+      },
+    })
+    expect(pages).toEqual([1, 2])
+    expect(result.postings.map((p) => p.externalId)).toEqual(['1'])
+    expect(result.stopReasons).toEqual({ 전산: 'error' })
+    expect(result.errors.전산).toBe('사용자가 수집을 중단했습니다.')
+  })
+
+  it('excludes expired postings from the maxItems count when now is provided', async () => {
+    const pastDeadline = '2026-11-10T00:00:00+09:00'
+    const openDeadline = '2026-12-01T00:00:00+09:00'
+    const s = server({
+      [pageUrl('전산', 1)]: fakePage(
+        [
+          { id: '1', createdAt: hoursAgo(1), deadline: pastDeadline },
+          { id: '2', createdAt: hoursAgo(2), deadline: pastDeadline },
+          { id: '3', createdAt: hoursAgo(3), deadline: openDeadline },
+        ],
+        2,
+      ),
+      [pageUrl('전산', 2)]: fakePage(
+        [
+          { id: '4', createdAt: hoursAgo(4), deadline: openDeadline },
+          { id: '5', createdAt: hoursAgo(5), deadline: openDeadline },
+        ],
+        2,
+      ),
+    })
+    const result = await collect(adapter, criteria(), { ...s.deps, now: NOW, maxItems: 2 })
+    expect(result.postings.map((p) => p.externalId)).toEqual(['1', '2', '3', '4'])
+    expect(result.stopReasons).toEqual({ 전산: 'page-cap' })
   })
 })

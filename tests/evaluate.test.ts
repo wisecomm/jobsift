@@ -20,18 +20,6 @@ describe('evaluate', () => {
     expect(evaluate(posting({ deadline: null }), criteria(), NOW).kind).toBe('pass')
   })
 
-  it('rejects an exclude keyword found in the title or in a job tag and names it', () => {
-    const c = criteria({ excludeKeywords: ['영업', '생산직'] })
-    expect(evaluate(posting({ title: '전산 영업 지원' }), c, NOW)).toEqual({
-      kind: 'reject',
-      reason: { gate: 'excludeKeyword', keyword: '영업' },
-    })
-    expect(evaluate(posting({ jobTags: ['생산직'] }), c, NOW)).toEqual({
-      kind: 'reject',
-      reason: { gate: 'excludeKeyword', keyword: '생산직' },
-    })
-  })
-
   it('rejects when no keyword is in the title or tags', () => {
     const result = evaluate(posting({ title: '회계 담당', jobTags: ['전산회계 2급'] }), criteria({ keywords: ['개발'] }), NOW)
     expect(result).toEqual({ kind: 'reject', reason: { gate: 'keywordMismatch' } })
@@ -45,11 +33,10 @@ describe('evaluate', () => {
   })
 
   it('reports the first failing gate in order', () => {
-    const p = posting({ title: '영업', deadline: '2026-01-01T00:00:00+09:00', locations: ['부산'], career: { kind: 'experienced', minYears: 3 } })
-    const c = criteria({ keywords: ['전산'], excludeKeywords: ['영업'], locations: ['서울'], career: 'new' })
+    const p = posting({ title: '회계', deadline: '2026-01-01T00:00:00+09:00', locations: ['부산'], career: { kind: 'experienced', minYears: 3 } })
+    const c = criteria({ keywords: ['전산'], locations: ['서울'], career: 'new' })
     expect(evaluate(p, c, NOW)).toEqual({ kind: 'reject', reason: { gate: 'expired' } })
-    expect(evaluate({ ...p, deadline: null }, c, NOW)).toEqual({ kind: 'reject', reason: { gate: 'excludeKeyword', keyword: '영업' } })
-    expect(evaluate({ ...p, deadline: null, title: '회계' }, c, NOW)).toEqual({ kind: 'reject', reason: { gate: 'keywordMismatch' } })
+    expect(evaluate({ ...p, deadline: null }, c, NOW)).toEqual({ kind: 'reject', reason: { gate: 'keywordMismatch' } })
     expect(evaluate({ ...p, deadline: null, title: '전산' }, c, NOW)).toEqual({ kind: 'reject', reason: { gate: 'location' } })
     expect(evaluate({ ...p, deadline: null, title: '전산', locations: ['서울'] }, c, NOW)).toEqual({ kind: 'reject', reason: { gate: 'career' } })
   })
@@ -75,6 +62,23 @@ describe('evaluate', () => {
     it('matches Korean keywords as plain substrings', () => {
       expect(matches('전산', '전산회계 2급 우대')).toBe(true)
       expect(matches('회계', '전산 담당')).toBe(false)
+    })
+
+    it('ignores keywords that only appear inside the company name in the title', () => {
+      const gov = posting({
+        company: '한국건강증진개발원',
+        title: '한국건강증진개발원 2026년 개방형직위(전략경영본부장) 공모',
+        jobTags: [],
+      })
+      expect(evaluate(gov, criteria({ keywords: ['개발'] }), NOW)).toEqual({ kind: 'reject', reason: { gate: 'keywordMismatch' } })
+      expect(evaluate(gov, criteria({ keywords: ['개발'] }), NOW, { requireKeywordMatch: false })).toEqual({ kind: 'pass', matchedKeywords: [] })
+
+      const realDev = posting({
+        company: '(주)한국건강증진개발원',
+        title: '한국건강증진개발원 백엔드 개발자 채용',
+        jobTags: [],
+      })
+      expect(evaluate(realDev, criteria({ keywords: ['개발'] }), NOW)).toEqual({ kind: 'pass', matchedKeywords: ['개발'] })
     })
   })
 

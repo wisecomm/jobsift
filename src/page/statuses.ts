@@ -3,11 +3,11 @@ import type { StatusTab } from './selectPostings'
 
 export const STATUS_TABS: readonly { status: StatusTab; label: string }[] = [
   { status: 'new', label: '신규' },
+  { status: 'active', label: '활성 전체' },
   { status: 'saved', label: '관심' },
   { status: 'applied', label: '지원완료' },
-  { status: 'dismissed', label: '확인완료' },
   { status: 'expired', label: '마감' },
-  { status: 'all', label: '전체' },
+  { status: 'dismissed', label: '확인완료' },
 ]
 
 export const STATUS_LABEL: Record<PostingStatus, string> = {
@@ -18,9 +18,9 @@ export const STATUS_LABEL: Record<PostingStatus, string> = {
   expired: '마감',
 }
 
-const ACTIONS: readonly { to: UserStatus; label: string; backLabel?: string }[] = [
-  { to: 'saved', label: '관심' },
-  { to: 'applied', label: '지원완료' },
+const ACTIONS: readonly { to: UserStatus; label: string }[] = [
+  { to: 'saved', label: '★ 관심' },
+  { to: 'applied', label: '✓ 지원완료' },
   { to: 'dismissed', label: '확인완료' },
   { to: 'new', label: '신규로 되돌리기' },
 ]

@@ -36,9 +36,8 @@ const mixedItems: FakeItem[] = [
   { id: '3', createdAt: hoursAgo(3), areas: ['B010'] },
   { id: '4', createdAt: hoursAgo(4), deadline: '2026-11-01T00:00:00+09:00' },
   { id: '5', createdAt: hoursAgo(5), careerType: '2' },
-  { id: '6', createdAt: hoursAgo(6), title: '전산 영업' },
 ]
-const rules = criteria({ locations: ['서울'], career: 'new', excludeKeywords: ['영업'] })
+const rules = criteria({ locations: ['서울'], career: 'new' })
 
 const stored = (id: string, overrides: Partial<StoredPosting> = {}): StoredPosting => ({
   ...posting({ externalId: id }),
@@ -59,24 +58,24 @@ describe('runCollection', () => {
     const summary = await runCollection(adapter, rules, store, s.deps(NOW))
 
     expect(summary).toMatchObject({
-      scanned: 6,
+      scanned: 5,
       saved: 1,
-      discarded: 5,
-      discardedByGate: { expired: 1, excludeKeyword: 1, keywordMismatch: 1, location: 1, career: 1 },
+      discarded: 4,
+      discardedByGate: { expired: 1, keywordMismatch: 1, location: 1, career: 1 },
       expiredMarked: 0,
       stopReasons: { 전산: 'exhausted' },
     })
     const kept = await store.listPostings('jobkorea')
     expect(kept.map((p) => [p.externalId, p.status, p.matchedKeywords])).toEqual([['1', 'new', ['전산']]])
-    expect((await store.listDiscards('jobkorea')).map((d) => d.externalId).sort()).toEqual(['2', '3', '4', '5', '6'])
+    expect((await store.listDiscards('jobkorea')).map((d) => d.externalId).sort()).toEqual(['2', '3', '4', '5'])
     expect(await store.getCollectState('jobkorea', '전산')).toMatchObject({ lastCollectedAt: NOW.toISOString() })
   })
 
   it('a second run with the same pages fetches one page and changes nothing', async () => {
     const store = await freshStore()
     const s = site({
-      [pageUrl('전산')]: fakePage(mixedItems, 3),
-      [pageUrl('전산', 2)]: fakePage([{ id: '8', createdAt: hoursAgo(24 * 10) }], 3),
+      [pageUrl('전산')]: fakePage(mixedItems, 2),
+      [pageUrl('전산', 2)]: fakePage([{ id: '8', createdAt: hoursAgo(24 * 10) }], 2),
     })
     await runCollection(adapter, rules, store, s.deps(NOW))
     expect(s.requested).toHaveLength(2)
@@ -143,11 +142,11 @@ describe('runCollection', () => {
     const s = site({
       [pageUrl('전산')]: fakePage([{ id: '1', createdAt: hoursAgo(1) }, { id: '2', createdAt: hoursAgo(3) }], 9),
       [pageUrl('회계')]: fakePage(
-        [{ id: '3', createdAt: hoursAgo(1), title: '회계' }, { id: '4', createdAt: hoursAgo(30), title: '회계' }],
+        [{ id: '3', createdAt: hoursAgo(1), title: '회계' }, { id: '4', createdAt: hoursAgo(24 * 5), title: '회계' }],
         1,
       ),
     })
-    const summary = await runCollection(adapter, criteria({ keywords: ['전산', '회계'], initialDays: 3 }), store, s.deps(NOW))
+    const summary = await runCollection(adapter, criteria({ keywords: ['전산', '회계'] }), store, s.deps(NOW))
     expect(summary.stopReasons).toEqual({ 전산: 'cutoff', 회계: 'exhausted' })
     expect((await store.listPostings('jobkorea')).map((p) => p.externalId).sort()).toEqual(['1', '3', '4'])
   })
@@ -210,7 +209,7 @@ describe('runCollection with AI on', () => {
     const store = await freshStore()
     const s = site({ [pageUrl('전산')]: fakePage(mixedItems, 1) })
     const summary = await runCollection(adapter, rules, store, aiDeps(s))
-    expect(summary.discardedByGate).toMatchObject({ keywordMismatch: 0, excludeKeyword: 1, location: 1, career: 1, expired: 1 })
+    expect(summary.discardedByGate).toMatchObject({ keywordMismatch: 0, location: 1, career: 1, expired: 1 })
     expect(summary.queued).toBe(2)
   })
 
@@ -229,5 +228,64 @@ describe('runCollection with AI on', () => {
     const summary = await runCollection(adapter, rules, store, s.deps(NOW))
     expect(summary).toMatchObject({ aiOn: false, queued: 0, saved: 1 })
     expect(await store.listPending('jobkorea')).toEqual([])
+  })
+
+  it('continues collecting past maxItems on subsequent continueFromCap passes until exhausted', async () => {
+    const store = await freshStore()
+    const all25: FakeItem[] = Array.from({ length: 25 }, (_, i) => ({ id: String(i + 1), createdAt: hoursAgo(i + 1) }))
+    const s = site({
+      [pageUrl('전산', 1)]: fakePage(all25.slice(0, 20), 2),
+      [pageUrl('전산', 2)]: fakePage(all25.slice(20, 25), 2),
+    })
+
+    const first = await runCollection(adapter, criteria(), store, { ...s.deps(NOW), maxItems: 10 })
+    expect(first.scanned).toBe(10)
+    expect(first.stopReasons).toEqual({ 전산: 'page-cap' })
+    const expectedSevenDayCutoff = new Date(NOW.getTime() - 7 * 86_400_000).toISOString()
+    expect((await store.getCollectState('jobkorea', '전산'))?.resume).toEqual({ nextPage: 1, cutoff: expectedSevenDayCutoff })
+
+    const second = await runCollection(adapter, criteria(), store, {
+      ...s.deps(new Date(NOW.getTime() + 60_000)),
+      maxItems: 10,
+      keywords: ['전산'],
+      continueFromCap: true,
+    })
+    expect(second.scanned).toBe(10)
+    expect(second.stopReasons).toEqual({ 전산: 'page-cap' })
+    expect((await store.getCollectState('jobkorea', '전산'))?.resume).toEqual({ nextPage: 2, cutoff: expectedSevenDayCutoff })
+
+    const third = await runCollection(adapter, criteria(), store, {
+      ...s.deps(new Date(NOW.getTime() + 120_000)),
+      maxItems: 10,
+      keywords: ['전산'],
+      continueFromCap: true,
+    })
+    expect(third.scanned).toBe(5)
+    expect(third.stopReasons).toEqual({ 전산: 'exhausted' })
+    expect((await store.getCollectState('jobkorea', '전산'))?.resume).toBeUndefined()
+    expect(await store.listPostings('jobkorea')).toHaveLength(25)
+  })
+
+  it('caps initial collection to 7 days and counts only unexpired postings toward maxItems', async () => {
+    const store = await freshStore()
+    const pastDeadline = '2026-11-10T00:00:00+09:00'
+    const openDeadline = '2026-12-01T00:00:00+09:00'
+    const s = site({
+      [pageUrl('전산', 1)]: fakePage(
+        [
+          { id: '1', createdAt: hoursAgo(1), deadline: pastDeadline },
+          { id: '2', createdAt: hoursAgo(2), deadline: pastDeadline },
+          { id: '3', createdAt: hoursAgo(3), deadline: openDeadline },
+          { id: '4', createdAt: hoursAgo(24 * 8), deadline: openDeadline },
+        ],
+        3,
+      ),
+    })
+
+    const summary = await runCollection(adapter, criteria(), store, { ...s.deps(NOW), maxItems: 2 })
+    expect(summary.stopReasons).toEqual({ 전산: 'cutoff' })
+    expect(summary.saved).toBe(1)
+    expect(summary.discardedByGate.expired).toBe(2)
+    expect((await store.getCollectState('jobkorea', '전산'))?.resume).toBeUndefined()
   })
 })

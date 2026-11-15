@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { SiteSettingsView } from '../shared/messages'
-import { runStatusLine, stopNotices } from './format'
+import { runStatusLine, stopNoticeItems } from './format'
 import { orderedSiteList, SITES_TAB_LABEL, type SiteInfo } from './sites'
 
 interface Props {
@@ -10,29 +10,22 @@ interface Props {
   /** Resolves once saved, or throws a Korean message (turning off the last site is refused). */
   onToggle: (id: string, on: boolean) => Promise<void>
   onMove: (id: string, direction: 'up' | 'down') => Promise<void>
+  onUpdateMaxItems: (id: string, maxItems: number) => Promise<void>
   onCollectSite: (id: string) => void
+  onContinueSite?: (id: string, keyword?: string) => void
 }
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
-export function SitesView({ state, busy, canCollect, onToggle, onMove, onCollectSite }: Props) {
+export function SitesView({ state, busy, canCollect, onToggle, onMove, onUpdateMaxItems, onCollectSite, onContinueSite }: Props) {
   const [message, setMessage] = useState<string | null>(null)
   const ordered = orderedSiteList(state.settings.siteOrder)
   const availableCount = ordered.filter((site) => site.availability === 'available').length
 
-  async function toggle(id: string, on: boolean) {
+  async function runAction(task: () => Promise<void>) {
     setMessage(null)
     try {
-      await onToggle(id, on)
-    } catch (e) {
-      setMessage(errorText(e))
-    }
-  }
-
-  async function move(id: string, direction: 'up' | 'down') {
-    setMessage(null)
-    try {
-      await onMove(id, direction)
+      await task()
     } catch (e) {
       setMessage(errorText(e))
     }
@@ -51,9 +44,11 @@ export function SitesView({ state, busy, canCollect, onToggle, onMove, onCollect
             isLast={index === availableCount - 1}
             busy={busy}
             canCollect={canCollect}
-            onToggle={toggle}
-            onMove={move}
+            onToggle={(id, on) => void runAction(() => onToggle(id, on))}
+            onMove={(id, direction) => void runAction(() => onMove(id, direction))}
+            onUpdateMaxItems={(id, maxItems) => void runAction(() => onUpdateMaxItems(id, maxItems))}
             onCollectSite={onCollectSite}
+            onContinueSite={onContinueSite}
           />
         ))}
       </ul>
@@ -67,16 +62,17 @@ export function SitesView({ state, busy, canCollect, onToggle, onMove, onCollect
   )
 }
 
-interface RowProps extends Pick<Props, 'busy' | 'canCollect' | 'onCollectSite'> {
+interface RowProps extends Pick<Props, 'busy' | 'canCollect' | 'onCollectSite' | 'onContinueSite'> {
   site: SiteInfo
   state: SiteSettingsView
   isFirst: boolean
   isLast: boolean
   onToggle: (id: string, on: boolean) => void
   onMove: (id: string, direction: 'up' | 'down') => void
+  onUpdateMaxItems: (id: string, maxItems: number) => void
 }
 
-function SiteRow({ site, state, isFirst, isLast, busy, canCollect, onToggle, onMove, onCollectSite }: RowProps) {
+function SiteRow({ site, state, isFirst, isLast, busy, canCollect, onToggle, onMove, onUpdateMaxItems, onCollectSite, onContinueSite }: RowProps) {
   const link = (
     <a href={site.homeUrl} target="_blank" rel="noopener noreferrer">
       {site.homeUrl}
@@ -100,8 +96,19 @@ function SiteRow({ site, state, isFirst, isLast, busy, canCollect, onToggle, onM
     )
   }
 
+  const savedMaxItems = state.settings.maxItemsBySite?.[site.id] ?? site.defaultMaxItems
+  const [maxItemsInput, setMaxItemsInput] = useState(String(savedMaxItems))
+  useEffect(() => {
+    setMaxItemsInput(String(savedMaxItems))
+  }, [savedMaxItems])
+
+  const parsedLimit = Math.round(Number(maxItemsInput))
+  const limitValid = Number.isFinite(parsedLimit) && parsedLimit >= 1
+  const limitChanged = limitValid && parsedLimit !== savedMaxItems
+
   const enabled = state.settings.enabledSites.includes(site.id)
   const run = state.runs[site.id]
+  const resumableKeywords = state.resumableBySite?.[site.id] ?? []
   return (
     <li className="site-row" data-site={site.id}>
       <div className="site-head">
@@ -132,11 +139,45 @@ function SiteRow({ site, state, isFirst, isLast, busy, canCollect, onToggle, onM
           <dt>최근 수집</dt>
           <dd data-testid={`run-${site.id}`}>{runStatusLine(run)}</dd>
         </div>
+        <div>
+          <dt>최대 수집</dt>
+          <dd>
+            <form
+              className="site-limit"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (limitChanged) onUpdateMaxItems(site.id, parsedLimit)
+              }}
+            >
+              <input
+                type="number"
+                min={1}
+                aria-label={`${site.name} 키워드당 최대 수집 개수`}
+                value={maxItemsInput}
+                onChange={(e) => setMaxItemsInput(e.target.value)}
+              />
+              <span>건 (키워드당)</span>
+              <button type="submit" disabled={busy || !limitChanged}>
+                적용
+              </button>
+              {resumableKeywords.length > 0 && onContinueSite && (
+                <button type="button" onClick={() => onContinueSite(site.id)} disabled={busy || !canCollect || !enabled}>
+                  계속 수집
+                </button>
+              )}
+            </form>
+          </dd>
+        </div>
       </dl>
       {run?.result.kind === 'ok' &&
-        stopNotices(run.result.summary).map((notice) => (
-          <p key={notice} className="warn">
-            {notice}
+        stopNoticeItems(run.result.summary).map((item) => (
+          <p key={`${item.keyword ?? 'page-cap'}:${item.text}`} className="warn notice-line">
+            <span>{item.text}</span>
+            {item.continuable && resumableKeywords.length > 0 && onContinueSite && (
+              <button type="button" onClick={() => onContinueSite(site.id)} disabled={busy || !canCollect || !enabled}>
+                계속 수집
+              </button>
+            )}
           </p>
         ))}
       <button type="button" onClick={() => onCollectSite(site.id)} disabled={busy || !canCollect || !enabled}>

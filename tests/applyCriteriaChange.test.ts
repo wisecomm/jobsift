@@ -126,9 +126,7 @@ describe('criteriaChanged', () => {
   it('notices a real difference in any rule field', () => {
     const base = criteria()
     expect(criteriaChanged(base, criteria({ keywords: ['회계'] }))).toBe(true)
-    expect(criteriaChanged(base, criteria({ excludeKeywords: ['영업'] }))).toBe(true)
     expect(criteriaChanged(base, criteria({ locations: ['서울'] }))).toBe(true)
     expect(criteriaChanged(base, criteria({ career: 'new' }))).toBe(true)
-    expect(criteriaChanged(base, criteria({ initialDays: 3 }))).toBe(true)
   })
 })

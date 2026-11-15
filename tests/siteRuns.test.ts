@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { clearSiteRuns, loadSiteRuns, recordSiteRuns } from '../src/engine/siteRuns'
+import { addSiteRunUsage, clearSiteRuns, loadSiteRuns, recordSiteRuns } from '../src/engine/siteRuns'
 import type { CollectionSummary, SiteRunStatus } from '../src/shared/types'
 
 const summary: CollectionSummary = {
   scanned: 5, saved: 2, queued: 0, aiOn: false, discarded: 3, expiredMarked: 0, stopReasons: { 전산: 'exhausted' }, errors: {},
-  discardedByGate: { expired: 0, excludeKeyword: 0, keywordMismatch: 3, location: 0, career: 0, lowScore: 0 },
+  discardedByGate: { expired: 0, keywordMismatch: 3, location: 0, career: 0, lowScore: 0 },
 }
 const ok = (site: string, at: string): SiteRunStatus => ({ site, at, result: { kind: 'ok', summary } })
 
@@ -38,5 +38,21 @@ describe('site run status storage', () => {
     await recordSiteRuns(a, [ok('jobkorea', '2026-11-13T10:00:00Z')])
     await clearSiteRuns(a)
     expect(await loadSiteRuns(a)).toEqual({})
+  })
+
+  it('accumulates tokenUsage onto existing ok site runs via addSiteRunUsage', async () => {
+    const a = area()
+    const u1 = { inputTokens: 100, outputTokens: 40, thoughtTokens: 20, cachedTokens: 0, totalTokens: 160 }
+    const u2 = { inputTokens: 50, outputTokens: 20, thoughtTokens: 10, cachedTokens: 0, totalTokens: 80 }
+    await recordSiteRuns(a, [{ site: 'jobkorea', at: '2026-11-13T10:00:00Z', result: { kind: 'ok', summary: { ...summary, aiOn: true, tokenUsage: u1 } } }])
+    await addSiteRunUsage(a, { jobkorea: u2 })
+    const loaded = await loadSiteRuns(a)
+    expect(loaded.jobkorea?.result.kind === 'ok' && loaded.jobkorea.result.summary.tokenUsage).toEqual({
+      inputTokens: 150,
+      outputTokens: 60,
+      thoughtTokens: 30,
+      cachedTokens: 0,
+      totalTokens: 240,
+    })
   })
 })

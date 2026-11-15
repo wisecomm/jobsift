@@ -1,6 +1,7 @@
+import type { PendingPosting, RejectReason, SearchCriteria, StoredPosting } from '../shared/types'
 import type { Store } from '../storage/store'
-import { postingSources, type PendingPosting, type SearchCriteria, type StoredPosting } from '../shared/types'
 import { evaluate } from './evaluate'
+import { toDiscardRecords, toPendingPosting, toStoredPosting } from './postingRecords'
 
 export interface ChangeResult {
   /** Postings the new rules turned away. */
@@ -8,23 +9,6 @@ export interface ChangeResult {
   /** Postings now waiting for an AI score (AI on). */
   queued: number
 }
-
-const toPending = ({ status, memo, score, scoreReason, collectedAt, updatedAt, ...rest }: StoredPosting, matchedKeywords: string[]): PendingPosting => ({
-  ...rest,
-  matchedKeywords,
-  queuedAt: collectedAt,
-})
-
-const fromPending = ({ queuedAt, matchedKeywords, ...rest }: PendingPosting, now: Date): StoredPosting => ({
-  ...rest,
-  matchedKeywords,
-  status: 'new',
-  memo: '',
-  score: null,
-  scoreReason: null,
-  collectedAt: queuedAt,
-  updatedAt: now.toISOString(),
-})
 
 /**
  * Re-applies the rules and the AI mode to what is stored, for every site. Only untouched postings follow: `new` ones without a memo,
@@ -43,14 +27,10 @@ export async function applyCriteriaChange(
   const result: ChangeResult = { removed: 0, queued: 0 }
   const options = { requireKeywordMatch: !aiOn }
   // Read before moving postings in, so those are not processed twice.
-  const waiting = await store.listPending()
+  const waiting: PendingPosting[] = await store.listPending()
 
-  const reject = async (posting: StoredPosting | PendingPosting, reason: Extract<ReturnType<typeof evaluate>, { kind: 'reject' }>['reason']) => {
-    await Promise.all(
-      postingSources(posting).map((source) =>
-        store.putDiscard({ site: source.site, externalId: source.externalId, reason, discardedAt: nowIso, deadline: posting.deadline }),
-      ),
-    )
+  const discardAllSources = async (posting: StoredPosting | PendingPosting, reason: RejectReason) => {
+    await Promise.all(toDiscardRecords(posting, reason, nowIso).map((record) => store.putDiscard(record)))
     result.removed++
   }
 
@@ -58,29 +38,50 @@ export async function applyCriteriaChange(
     if (posting.status !== 'new') continue
     const outcome = evaluate(posting, criteria, now, options)
     if (outcome.kind === 'reject') {
-      await reject(posting, outcome.reason)
+      await discardAllSources(posting, outcome.reason)
       await store.deletePosting(posting)
-    } else if (aiOn && posting.memo === '') {
-      await store.putPending(toPending(posting, outcome.matchedKeywords))
+      continue
+    }
+    if (aiOn && posting.memo === '') {
+      await store.putPending(toPendingPosting(posting, outcome.matchedKeywords, posting.collectedAt))
       await store.deletePosting(posting)
       result.queued++
-    } else {
-      await store.putPosting({ ...posting, matchedKeywords: outcome.matchedKeywords, score: aiOn ? posting.score : null, scoreReason: aiOn ? posting.scoreReason : null, updatedAt: nowIso })
+      continue
     }
+    const { tokenUsage: _droppedUsage, ...withoutUsage } = posting
+    await store.putPosting({
+      ...withoutUsage,
+      matchedKeywords: outcome.matchedKeywords,
+      score: aiOn ? posting.score : null,
+      scoreReason: aiOn ? posting.scoreReason : null,
+      ...(aiOn && posting.tokenUsage ? { tokenUsage: posting.tokenUsage } : {}),
+      updatedAt: nowIso,
+    })
   }
 
   for (const posting of waiting) {
     const outcome = evaluate(posting, criteria, now, options)
     if (outcome.kind === 'reject') {
-      await reject(posting, outcome.reason)
-    } else if (aiOn) {
+      await discardAllSources(posting, outcome.reason)
+      await store.deletePending([posting])
+      continue
+    }
+    if (aiOn) {
       await store.putPending({ ...posting, matchedKeywords: outcome.matchedKeywords })
       result.queued++
       continue
-    } else {
-      await store.putPosting({ ...fromPending(posting, now), matchedKeywords: outcome.matchedKeywords })
     }
+    await store.putPosting(
+      toStoredPosting(posting, {
+        matchedKeywords: outcome.matchedKeywords,
+        score: null,
+        scoreReason: null,
+        collectedAt: posting.queuedAt,
+        updatedAt: nowIso,
+      }),
+    )
     await store.deletePending([posting])
   }
+
   return result
 }
