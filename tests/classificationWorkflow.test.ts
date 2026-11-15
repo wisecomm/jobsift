@@ -14,12 +14,13 @@ const NOW = new Date('2026-11-13T20:00:00+09:00')
 const hoursAgo = (h: number) => new Date(NOW.getTime() - h * 3600_000).toISOString()
 
 describe('단순화된 분류/저장 워크플로우 검증', () => {
-  it('RULE_GATES가 4개 조건 그룹(deadline, keyword, location, career) 순서대로 구성된다', () => {
+  it('RULE_GATES가 5개 조건 그룹(deadline, keyword, location, career, employmentType) 순서대로 구성된다', () => {
     expect(RULE_GATES.map((r) => [r.group, r.gate])).toEqual([
       ['deadline', 'expired'],
       ['keyword', 'keywordMismatch'],
       ['location', 'location'],
       ['career', 'career'],
+      ['employmentType', 'employmentType'],
     ])
   })
 
@@ -91,11 +92,14 @@ describe('단순화된 분류/저장 워크플로우 검증', () => {
     // 사용자가 #2를 저장 처리하면 이후 조건 변경에도 보호되어야 함
     await store.updatePosting({ site: 'jobkorea', externalId: '2' }, { status: 'saved', memo: '관심 공고' }, NOW)
 
-    // 2단계: AI ON으로 조건 변경 -> 보호되지 않은 new(#1)만 pending으로 이동, saved(#2) 유지
+    // 2단계: AI ON으로 조건 변경 -> 이미 저장된 공고(#1, #2)는 완료 상태이므로 유지되고, discards/수집 상태만 초기화됨
     const change = await applyCriteriaChange(store, rules, { aiOn: true }, NOW)
-    expect(change).toEqual({ removed: 0, queued: 1 })
-    expect((await store.listPending()).map((p) => p.externalId)).toEqual(['1'])
-    expect((await store.listPostings()).map((p) => [p.externalId, p.status, p.memo])).toEqual([['2', 'saved', '관심 공고']])
+    expect(change).toEqual({ removed: 0, queued: 0 })
+    expect(await store.listPending()).toEqual([])
+    expect((await store.listPostings()).map((p) => [p.externalId, p.status, p.memo]).sort()).toEqual([
+      ['1', 'new', ''],
+      ['2', 'saved', '관심 공고'],
+    ])
 
     // 3단계: AI ON 재수집 시 기존 discards가 비워졌으므로 second:102도 AI 평가 대기열로 유입되고 점수에 따라 저장/폐기됨
     const secondReport = await runAllSites([jobkorea, second], rules, store, {
@@ -117,11 +121,11 @@ describe('단순화된 분류/저장 워크플로우 검증', () => {
       },
     })
 
-    expect(secondReport.scoring).toMatchObject({ scored: 2, kept: 1, lowScore: 1, pendingLeft: 0, error: null })
+    expect(secondReport.scoring).toMatchObject({ scored: 1, kept: 0, lowScore: 1, pendingLeft: 0, error: null })
     expect(await store.listPending()).toEqual([])
     const finalPostings = await store.listPostings()
     expect(finalPostings.map((p) => [p.externalId, p.status, p.score]).sort()).toEqual([
-      ['1', 'new', 85],
+      ['1', 'new', null],
       ['2', 'saved', null],
     ])
     expect((await store.listDiscards('second')).map((d) => [d.externalId, d.reason])).toEqual([

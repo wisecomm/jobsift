@@ -51,7 +51,7 @@ describe('locationSummary', () => {
 describe('stopNotices', () => {
   const summary = (over: Partial<CollectionSummary>): CollectionSummary => ({
     scanned: 0, saved: 0, queued: 0, aiOn: false, discarded: 0, expiredMarked: 0, errors: {}, stopReasons: {},
-    discardedByGate: { expired: 0, keywordMismatch: 0, location: 0, career: 0, lowScore: 0 },
+    discardedByGate: { expired: 0, keywordMismatch: 0, location: 0, career: 0, employmentType: 0, lowScore: 0 },
     ...over,
   })
 
@@ -73,7 +73,7 @@ describe('SAMPLE_DESCRIPTIONS', () => {
 describe('collection and scoring lines', () => {
   const base: CollectionSummary = {
     scanned: 25, saved: 0, queued: 25, aiOn: false, discarded: 0, expiredMarked: 0, errors: {}, stopReasons: {},
-    discardedByGate: { expired: 0, keywordMismatch: 0, location: 0, career: 0, lowScore: 0 },
+    discardedByGate: { expired: 0, keywordMismatch: 0, location: 0, career: 0, employmentType: 0, lowScore: 0 },
   }
 
   it('says saved in rules-only mode and queued in AI mode', () => {
@@ -99,7 +99,7 @@ describe('collection and scoring lines', () => {
 describe('multi-site report', () => {
   const summary = (scanned: number, saved: number): CollectionSummary => ({
     scanned, saved, queued: 0, aiOn: false, discarded: 0, expiredMarked: 0, errors: {}, stopReasons: {},
-    discardedByGate: { expired: 0, keywordMismatch: 0, location: 0, career: 0, lowScore: 0 },
+    discardedByGate: { expired: 0, keywordMismatch: 0, location: 0, career: 0, employmentType: 0, lowScore: 0 },
   })
   const name = (site: string) => ({ a: '가', b: '나' })[site] ?? site
   const run = (site: string, s: CollectionSummary) => ({ site, at: '2026-11-13T10:00:00Z', result: { kind: 'ok' as const, summary: s } })

@@ -30,7 +30,8 @@
       "postedAt": { "selector": "td:nth-child(4)" },
       "deadline": { "selector": "td:nth-child(5)" }
     },
-    "inferLocationFromCompany": true
+    "inferLocationFromCompany": true,
+    "inferEmploymentFromTitle": true
   },
   "postingUrlTemplate": "https://www.gojobs.go.kr/apmView.do?menuNo=401&mngrMenuYn=N&selMenuNo=400&upperMenuNo=&empmnsn={id}"
 }

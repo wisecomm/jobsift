@@ -4,7 +4,7 @@ import type { CollectionSummary, SiteRunStatus } from '../src/shared/types'
 
 const summary: CollectionSummary = {
   scanned: 5, saved: 2, queued: 0, aiOn: false, discarded: 3, expiredMarked: 0, stopReasons: { 전산: 'exhausted' }, errors: {},
-  discardedByGate: { expired: 0, keywordMismatch: 3, location: 0, career: 0, lowScore: 0 },
+  discardedByGate: { expired: 0, keywordMismatch: 3, location: 0, career: 0, employmentType: 0, lowScore: 0 },
 }
 const ok = (site: string, at: string): SiteRunStatus => ({ site, at, result: { kind: 'ok', summary } })
 

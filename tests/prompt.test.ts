@@ -3,8 +3,8 @@ import { buildInstruction, buildPrompt, SYSTEM_INSTRUCTION, toScoreItems } from 
 import type { PendingPosting } from '../src/shared/types'
 import { criteria, posting } from './helpers'
 
-const pending = (id: string, title: string): PendingPosting => ({
-  ...posting({ externalId: id, title, career: { kind: 'experienced', minYears: 3 }, jobTags: ['IT', '전산'], locations: ['서울>강남구'] }),
+const pending = (id: string, title: string, over: Partial<PendingPosting> = {}): PendingPosting => ({
+  ...posting({ externalId: id, title, career: { kind: 'experienced', minYears: 3 }, jobTags: ['IT', '전산'], locations: ['서울>강남구'], ...over }),
   matchedKeywords: [],
   queuedAt: '2026-11-13T00:00:00Z',
 })
@@ -15,10 +15,11 @@ describe('buildInstruction', () => {
     expect(text).toBe('공공기관에서 전산 운영을 하고 싶습니다.')
   })
 
-  it('falls back to keywords and career when the description is empty', () => {
-    const text = buildInstruction(criteria({ description: ' ', keywords: ['전산', '회계'], career: 'new' }))
+  it('falls back to keywords, career, and employmentTypes when the description is empty', () => {
+    const text = buildInstruction(criteria({ description: ' ', keywords: ['전산', '회계'], career: 'new', employmentTypes: ['contract'] }))
     expect(text).toContain('전산, 회계')
     expect(text).toContain('신입')
+    expect(text).toContain('계약직')
   })
 
   it('still says something when nothing is set', () => {
@@ -33,6 +34,8 @@ describe('buildPrompt', () => {
     expect(items.map((i) => i.index)).toEqual([0, 1])
     expect(Object.keys(items[0] ?? {}).sort()).toEqual(['career', 'company', 'index', 'jobTags', 'locations', 'title'])
     expect(items[0]?.career).toBe('경력 3년↑')
+    const withEmployment = toScoreItems([pending('c', '계약직 개발자', { employmentTypes: ['regular', 'contract'] })])
+    expect(withEmployment[0]?.employmentTypes).toEqual(['정규직', '계약직'])
   })
 
   it('contains the instruction and every item\'s index and title', () => {

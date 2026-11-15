@@ -1,6 +1,7 @@
 import { parse, type HTMLElement } from 'node-html-parser'
 import type { HtmlFieldRule, HtmlSelectorsExtract, SiteAdapter } from '../adapter/schema'
 import { DAY_MS } from '../shared/date'
+import { inferEmploymentFromTitle, parseEmploymentText } from '../shared/employment'
 import type { Career, JobPosting } from '../shared/types'
 import type { ExtractedPage } from './extractPostings'
 
@@ -169,6 +170,18 @@ export function extractHtmlPage(adapter: SiteAdapter, extract: HtmlSelectorsExtr
       ? parseCareerText(collapseSpaces(item.querySelector(extract.careerSelector)?.text ?? ''))
       : ({ kind: 'unknown' } as const)
 
+    const employmentTypes = extract.employmentSelector
+      ? parseEmploymentText(
+          item
+            .querySelectorAll(extract.employmentSelector)
+            .map((el) => collapseSpaces(el.text))
+            .filter(Boolean)
+            .join(','),
+        )
+      : extract.inferEmploymentFromTitle
+        ? inferEmploymentFromTitle(title)
+        : []
+
     const jobTags = extract.jobTagsSelector
       ? item.querySelectorAll(extract.jobTagsSelector).map((el) => collapseSpaces(el.text)).filter(Boolean)
       : []
@@ -180,6 +193,7 @@ export function extractHtmlPage(adapter: SiteAdapter, extract: HtmlSelectorsExtr
       company,
       locations,
       career,
+      employmentTypes,
       jobTags,
       postedAt,
       deadline,

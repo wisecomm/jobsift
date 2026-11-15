@@ -62,6 +62,7 @@ describe('extractPage for saramin fixture', () => {
       jobTags: ['물류관리', '재고관리', '물류업'],
       postedAt: '2026-11-13T00:00:00+09:00',
       deadline: '2026-11-28T23:59:59+09:00',
+      employmentTypes: ['regular'],
       url: 'https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=55570661',
     })
     expect(page.postings.filter((p) => p.deadline === null)).toHaveLength(5)
@@ -104,6 +105,7 @@ describe('extractPage for gojobs fixtures', () => {
       jobTags: [],
       postedAt: '2026-11-13T00:00:00+09:00',
       deadline: '2026-11-25T23:59:59+09:00',
+      employmentTypes: ['contract'],
       url: 'https://www.gojobs.go.kr/apmView.do?menuNo=401&mngrMenuYn=N&selMenuNo=400&upperMenuNo=&empmnsn=308586',
     })
   })

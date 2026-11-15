@@ -7,6 +7,7 @@ export interface ScoreItem {
   company: string
   jobTags: string[]
   career: string
+  employmentTypes?: string[]
   locations: string[]
 }
 

@@ -1,9 +1,12 @@
 export type CareerFilter = 'any' | 'new' | 'experienced'
 
+export type EmploymentType = 'regular' | 'contract' | 'intern' | 'dispatch' | 'freelance' | 'partTime' | 'other'
+
 export interface SearchCriteria {
   keywords: string[]
   locations: string[]
   career: CareerFilter
+  employmentTypes: EmploymentType[]
   description: string
 }
 
@@ -21,6 +24,7 @@ export interface JobPosting {
   company: string
   locations: string[]
   career: Career
+  employmentTypes?: EmploymentType[]
   jobTags: string[]
   postedAt: string
   deadline: string | null
@@ -44,6 +48,7 @@ export type RejectReason =
   | { gate: 'keywordMismatch' }
   | { gate: 'location' }
   | { gate: 'career' }
+  | { gate: 'employmentType' }
   | { gate: 'lowScore'; score: number }
 
 export type RejectGate = RejectReason['gate']

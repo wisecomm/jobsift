@@ -1,4 +1,5 @@
 import { careerLabel } from '../shared/career'
+import { employmentTypesLabel } from '../shared/employment'
 import { postingSources, type PostingKey, type PostingPatch, type StoredPosting } from '../shared/types'
 import { deadlineLabel, formatDate, formatDateTime, locationSummary } from './format'
 import { MemoField } from './MemoField'
@@ -40,6 +41,9 @@ export function PostingCard({ posting: p, now, onUpdate }: Props) {
           <strong className="company-name">{p.company}</strong>
           <span className="meta-muted">· {regionText}</span>
           <span className="career-pill">{careerLabel(p.career)}</span>
+          {p.employmentTypes && p.employmentTypes.length > 0 && (
+            <span className="employment-pill">{employmentTypesLabel(p.employmentTypes)}</span>
+          )}
           {p.score !== null && (
             <span className="score-pill" aria-label={`AI 점수 ${p.score}점`}>
               AI {p.score}점

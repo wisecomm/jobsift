@@ -307,6 +307,46 @@ input, select, textarea {
 .settings small { font-weight: 400; color: var(--muted); }
 .settings .row { display: flex; flex-wrap: wrap; gap: 16px; }
 .settings .row label { flex: 1 1 220px; }
+.employment-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--subtle);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+}
+.employment-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.employment-fieldset legend { font-weight: 600; padding: 0; }
+.checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.settings .checkbox-pill {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.settings .checkbox-pill:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--subtle);
+  font-weight: 600;
+}
+.settings .checkbox-pill input { margin: 0; width: auto; }
 .samples { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
 .samples span { color: var(--muted); font-size: 13px; margin-right: 4px; }
 .form-actions { display: flex; gap: 8px; }

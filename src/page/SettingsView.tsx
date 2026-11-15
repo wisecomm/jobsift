@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { AiInput } from '../ai/settings'
-import type { AiProvider, AiSettingsView, AiUsageRecord, CareerFilter, SearchCriteria } from '../shared/types'
+import { EMPLOYMENT_TYPE_OPTIONS } from '../shared/employment'
+import type { AiProvider, AiSettingsView, AiUsageRecord, CareerFilter, EmploymentType, SearchCriteria } from '../shared/types'
 import { AI_PROVIDER_LABELS, DEFAULT_MODELS } from '../ai/constants'
 import { formatDateTime } from './format'
 import { SAMPLE_DESCRIPTIONS } from './sampleDescriptions'
@@ -24,6 +25,7 @@ export function SettingsView({ criteria, ai, aiUsage, onSave, onCheckKey, onDele
   const [keywords, setKeywords] = useState(fromList(criteria.keywords))
   const [locations, setLocations] = useState(fromList(criteria.locations))
   const [career, setCareer] = useState<CareerFilter>(criteria.career)
+  const [employmentTypes, setEmploymentTypes] = useState<EmploymentType[]>(criteria.employmentTypes)
   const [description, setDescription] = useState(criteria.description)
   const [provider, setProvider] = useState<AiProvider>(ai.provider)
   const [draftKeys, setDraftKeys] = useState<Record<AiProvider, string>>({ gemini: '', exaone: '' })
@@ -39,6 +41,7 @@ export function SettingsView({ criteria, ai, aiUsage, onSave, onCheckKey, onDele
     setKeywords(fromList(criteria.keywords))
     setLocations(fromList(criteria.locations))
     setCareer(criteria.career)
+    setEmploymentTypes(criteria.employmentTypes)
     setDescription(criteria.description)
   }, [criteria])
 
@@ -69,10 +72,13 @@ export function SettingsView({ criteria, ai, aiUsage, onSave, onCheckKey, onDele
     }
   }
 
+  const toggleEmploymentType = (type: EmploymentType) =>
+    setEmploymentTypes((prev) => (prev.includes(type) ? prev.filter((item) => item !== type) : [...prev, type]))
+
   const save = () =>
     run(async () => {
       const text = await onSave(
-        { keywords: toList(keywords), locations: toList(locations), career, description },
+        { keywords: toList(keywords), locations: toList(locations), career, employmentTypes, description },
         { provider, apiKey: currentKey, model: currentModel, minScore: Number(minScore) },
       )
       setDraftKeys((prev) => ({ ...prev, [provider]: '' }))
@@ -128,6 +134,23 @@ export function SettingsView({ criteria, ai, aiUsage, onSave, onCheckKey, onDele
           <option value="experienced">경력</option>
         </select>
       </label>
+
+      <fieldset className="employment-fieldset">
+        <legend>고용형태</legend>
+        <div className="checkbox-group" role="group" aria-label="선호 고용형태">
+          {EMPLOYMENT_TYPE_OPTIONS.map((opt) => (
+            <label key={opt.value} className="checkbox-pill">
+              <input
+                type="checkbox"
+                checked={employmentTypes.includes(opt.value)}
+                onChange={() => toggleEmploymentType(opt.value)}
+              />
+              <span>{opt.label}</span>
+            </label>
+          ))}
+        </div>
+        <small>선택하지 않으면 고용형태는 무관으로 봅니다. 일부 사이트(나라일터)는 제목에 명시된 경우만 구분됩니다.</small>
+      </fieldset>
 
       <div className="description">
         <label>
@@ -246,7 +269,7 @@ export function SettingsView({ criteria, ai, aiUsage, onSave, onCheckKey, onDele
         )}
         <ul className="ai-notes">
           <li>키는 이 브라우저 프로필에 암호화 없이 저장되며, {hostName} 외에는 어디로도 보내지 않습니다.</li>
-          <li>채점할 때 공고의 제목, 회사, 직무 태그, 경력, 지역과 위의 "내가 원하는 일" 글이 {hostName}(으)로 전송됩니다.</li>
+          <li>채점할 때 공고의 제목, 회사, 직무 태그, 경력, 고용형태, 지역과 위의 "내가 원하는 일" 글이 {hostName}(으)로 전송됩니다.</li>
           <li>사용량 제한이나 요금은 내 키를 기준으로 {hostName}이(가) 정합니다.</li>
         </ul>
       </fieldset>

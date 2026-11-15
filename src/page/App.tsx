@@ -201,13 +201,13 @@ export function App() {
     await refresh()
   }
 
-  const removedNote = (removed: number) => (removed > 0 ? ` 조건에 맞지 않는 공고 ${removed}건을 제외했습니다.` : '')
+  const removedNote = (removed: number) => (removed > 0 ? ` 조건에 맞지 않는 대기 공고 ${removed}건을 제외했습니다.` : '')
   const queuedNote = (queued: number) => (queued > 0 ? ` 채점 대기 ${queued}건은 "대기 공고 채점"을 누르면 채점합니다.` : '')
 
   async function saveSettings(next: SearchCriteria, nextAi: AiInput): Promise<string> {
     const { changed, removed, queued } = await send({ type: 'saveSettings', criteria: next, ai: nextAi })
     await reloadSettings()
-    return changed ? `설정을 저장했습니다.${removedNote(removed)}${queuedNote(queued)}` : '설정을 저장했습니다.'
+    return changed ? `설정을 저장했습니다. 다음 수집부터 새 조건이 적용됩니다.${removedNote(removed)}${queuedNote(queued)}` : '설정을 저장했습니다.'
   }
 
   async function deleteKey(provider: NonNullable<typeof ai>['provider']): Promise<string> {

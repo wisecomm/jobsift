@@ -176,36 +176,35 @@ describe('postings of disabled and removed sites', () => {
 })
 
 describe('applyCriteriaChange across sites', () => {
-  it('re-applies the rules to the postings of every site', async () => {
+  it('re-applies the rules to pending postings of every site while leaving stored postings intact', async () => {
     const store = await freshStore()
     const busan = { locations: ['부산>해운대구'] }
     await store.putPosting(stored('jobkorea', 'a', busan))
-    await store.putPosting(stored('second', 'b', busan))
-    await store.putPosting(stored('second', 'c'))
-    await store.putPending({ ...waiting('second', 4), locations: ['부산>해운대구'] })
+    await store.putPending({ ...waiting('jobkorea', 1), title: '전산 개발', locations: ['부산>해운대구'] })
+    await store.putPending({ ...waiting('second', 3), title: '전산 개발' })
+    await store.putPending({ ...waiting('second', 4), title: '전산 개발', locations: ['부산>해운대구'] })
 
     const { removed } = await applyCriteriaChange(store, criteria({ locations: ['서울'] }), { aiOn: false }, NOW)
 
-    expect(removed).toBe(3)
-    expect((await store.listPostings()).map((p) => `${p.site}:${p.externalId}`)).toEqual(['second:c'])
-    expect((await store.listDiscards('jobkorea')).map((d) => d.externalId)).toEqual(['a'])
-    expect((await store.listDiscards('second')).map((d) => d.externalId).sort()).toEqual(['4', 'b'])
+    expect(removed).toBe(2)
+    expect((await store.listPostings()).map((p) => `${p.site}:${p.externalId}`).sort()).toEqual(['jobkorea:a', 'second:3'])
+    expect((await store.listDiscards('jobkorea')).map((d) => d.externalId)).toEqual(['1'])
+    expect((await store.listDiscards('second')).map((d) => d.externalId)).toEqual(['4'])
   })
 
-  it('writes discard records for all sites on a grouped posting', async () => {
+  it('writes discard records for all sites on a grouped pending posting', async () => {
     const store = await freshStore()
-    await store.putPosting(
-      stored('jobkorea', 'a', {
-        locations: ['부산>해운대구'],
-        alsoOn: [{ site: 'second', externalId: 's1', url: 'https://second.example.test/s1' }],
-      }),
-    )
+    await store.putPending({
+      ...waiting('jobkorea', 1),
+      locations: ['부산>해운대구'],
+      alsoOn: [{ site: 'second', externalId: 's1', url: 'https://second.example.test/s1' }],
+    })
 
     const { removed } = await applyCriteriaChange(store, criteria({ locations: ['서울'] }), { aiOn: false }, NOW)
 
     expect(removed).toBe(1)
-    expect(await store.listPostings()).toEqual([])
-    expect((await store.listDiscards('jobkorea')).map((d) => d.externalId)).toEqual(['a'])
+    expect(await store.listPending()).toEqual([])
+    expect((await store.listDiscards('jobkorea')).map((d) => d.externalId)).toEqual(['1'])
     expect((await store.listDiscards('second')).map((d) => d.externalId)).toEqual(['s1'])
   })
 })

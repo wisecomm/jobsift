@@ -39,6 +39,7 @@
     "modifiedMarker": "수정일",
     "locationPartsSelector": ".job_condition > span:first-child a",
     "careerSelector": ".job_condition > span:nth-child(2)",
+    "employmentSelector": ".job_condition > span",
     "jobTagsSelector": ".job_sector a"
   },
   "postingUrlTemplate": "https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx={id}"

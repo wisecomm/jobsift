@@ -1,17 +1,29 @@
 import { z } from 'zod'
-import type { SearchCriteria } from '../shared/types'
+import type { EmploymentType, SearchCriteria } from '../shared/types'
 
 export const DEFAULT_CRITERIA: SearchCriteria = {
   keywords: [],
   locations: [],
   career: 'any',
+  employmentTypes: [],
   description: '',
 }
+
+const employmentTypeSchema: z.ZodType<EmploymentType> = z.enum([
+  'regular',
+  'contract',
+  'intern',
+  'dispatch',
+  'freelance',
+  'partTime',
+  'other',
+])
 
 const criteriaSchema = z.object({
   keywords: z.array(z.string()),
   locations: z.array(z.string()),
   career: z.enum(['any', 'new', 'experienced']),
+  employmentTypes: z.array(employmentTypeSchema).default([]),
   description: z.string(),
 })
 
@@ -28,6 +40,7 @@ export function normalizeCriteria(criteria: SearchCriteria): SearchCriteria {
     ...criteria,
     keywords: cleanList(criteria.keywords),
     locations: cleanList(criteria.locations),
+    employmentTypes: [...new Set(criteria.employmentTypes)],
   }
 }
 
@@ -40,6 +53,7 @@ export function criteriaChanged(before: SearchCriteria, after: SearchCriteria): 
   return (
     asSet(a.keywords) !== asSet(b.keywords) ||
     asSet(a.locations) !== asSet(b.locations) ||
-    a.career !== b.career
+    a.career !== b.career ||
+    asSet(a.employmentTypes) !== asSet(b.employmentTypes)
   )
 }

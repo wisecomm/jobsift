@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { NextFlightQueryExtract, SiteAdapter } from '../adapter/schema'
-import type { Career, JobPosting } from '../shared/types'
+import { parseEmploymentText } from '../shared/employment'
+import type { Career, EmploymentType, JobPosting } from '../shared/types'
 import { findDehydratedQuery, readFlightPayload } from './flight'
 import { extractHtmlPage } from './htmlExtract'
 import { getPath } from './path'
@@ -14,6 +15,7 @@ const rawPosting = z.object({
   careerCode: z.union([z.string(), z.number()]).transform(String),
   careerMinYears: z.number().nullish(),
   areaCodes: z.array(z.string()).nullish(),
+  employmentCodes: z.array(z.string()).nullish(),
   jobTags: z.string().nullish(),
 })
 
@@ -23,16 +25,23 @@ function requireQuery(payload: string, key: string, site: string): unknown {
   return query
 }
 
-function areaLabels(extract: NextFlightQueryExtract, payload: string, site: string): Map<string, string> {
-  const { queryKey, tablePath, codeField, labelField } = extract.areaCodes
-  const table = getPath(requireQuery(payload, queryKey, site), tablePath)
+type CodeLookup = NextFlightQueryExtract['areaCodes']
+
+function codeLabels(spec: CodeLookup, query: unknown): Map<string, string> {
+  const table = getPath(query, spec.tablePath)
   const labels = new Map<string, string>()
   for (const row of Array.isArray(table) ? table : []) {
-    const code = getPath(row, codeField)
-    const label = getPath(row, labelField)
+    const code = getPath(row, spec.codeField)
+    const label = getPath(row, spec.labelField)
     if (typeof code === 'string' && typeof label === 'string') labels.set(code, label)
   }
   return labels
+}
+
+function toEmploymentTypes(codes: readonly string[] | null | undefined, labels: ReadonlyMap<string, string>): EmploymentType[] {
+  if (!codes || codes.length === 0 || labels.size === 0) return []
+  const rawLabels = codes.map((entry) => labels.get(entry.split('/')[0] ?? entry) ?? '').filter(Boolean)
+  return parseEmploymentText(rawLabels.join(','))
 }
 
 function toCareer(extract: NextFlightQueryExtract, code: string, minYears: number | null | undefined): Career {
@@ -63,7 +72,10 @@ export function extractPage(adapter: SiteAdapter, html: string): ExtractedPage {
   const items = getPath(query, extract.itemsPath)
   if (!Array.isArray(items)) throw new Error(`${adapter.id}: ${extract.itemsPath} 경로에 목록이 없습니다`)
 
-  const labels = areaLabels(extract, payload, adapter.id)
+  const labels = codeLabels(extract.areaCodes, requireQuery(payload, extract.areaCodes.queryKey, adapter.id))
+  const employmentSpec = extract.employmentCodes
+  const employmentQuery = employmentSpec ? findDehydratedQuery(payload, employmentSpec.queryKey) : undefined
+  const employmentLabels = employmentSpec && employmentQuery !== undefined ? codeLabels(employmentSpec, employmentQuery) : new Map<string, string>()
   const postings: JobPosting[] = []
   for (const item of items) {
     const candidate = Object.fromEntries(
@@ -79,6 +91,7 @@ export function extractPage(adapter: SiteAdapter, html: string): ExtractedPage {
       company: raw.company,
       locations: (raw.areaCodes ?? []).map((code) => labels.get(code) ?? code),
       career: toCareer(extract, raw.careerCode, raw.careerMinYears),
+      employmentTypes: toEmploymentTypes(raw.employmentCodes, employmentLabels),
       jobTags: (raw.jobTags ?? '').split(extract.jobTagsSeparator).filter(Boolean),
       postedAt: raw.postedAt,
       deadline: toDeadline(extract, raw.deadline),

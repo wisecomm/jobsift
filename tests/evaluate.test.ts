@@ -129,4 +129,24 @@ describe('evaluate', () => {
       expect(Object.keys(kinds).filter((k) => verdict('any', k as keyof typeof kinds) === 'reject')).toEqual([])
     })
   })
+
+  describe('employmentType', () => {
+    it('passes everything when no employment preference is set', () => {
+      expect(evaluate(posting({ employmentTypes: ['regular'] }), criteria({ employmentTypes: [] }), NOW).kind).toBe('pass')
+    })
+
+    it('rejects mismatches when both posting and criteria specify employment types', () => {
+      expect(
+        evaluate(posting({ employmentTypes: ['regular'] }), criteria({ employmentTypes: ['contract'] }), NOW),
+      ).toEqual({ kind: 'reject', reason: { gate: 'employmentType' } })
+    })
+
+    it('passes on overlap and when posting employmentTypes is empty/unknown', () => {
+      expect(
+        evaluate(posting({ employmentTypes: ['regular', 'contract'] }), criteria({ employmentTypes: ['contract'] }), NOW).kind,
+      ).toBe('pass')
+      expect(evaluate(posting({ employmentTypes: [] }), criteria({ employmentTypes: ['contract'] }), NOW).kind).toBe('pass')
+      expect(evaluate(posting(), criteria({ employmentTypes: ['contract'] }), NOW).kind).toBe('pass')
+    })
+  })
 })

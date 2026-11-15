@@ -24,6 +24,7 @@ function basePosting(posting: PostingCandidate): PostingCandidate {
     deadline: posting.deadline,
     url: posting.url,
   }
+  if (posting.employmentTypes !== undefined) base.employmentTypes = posting.employmentTypes
   if (posting.alsoOn !== undefined) base.alsoOn = posting.alsoOn
   return base
 }

@@ -13,6 +13,7 @@ export function criteria(overrides: Partial<SearchCriteria> = {}): SearchCriteri
     keywords: ['전산'],
     locations: [],
     career: 'any',
+    employmentTypes: [],
     description: '',
     ...overrides,
   }

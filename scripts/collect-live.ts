@@ -19,7 +19,7 @@ if (!adapter) {
 }
 const result = await collect(
   adapter,
-  { keywords: [keyword], locations: [], career: 'any', description: '' },
+  { keywords: [keyword], locations: [], career: 'any', employmentTypes: [], description: '' },
   {
     fetchHtml: async (url) => {
       console.error(`GET ${url}`)

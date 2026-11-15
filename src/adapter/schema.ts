@@ -12,6 +12,13 @@ const searchParam = z.object({
   }),
 })
 
+const codeLookup = z.object({
+  queryKey: z.string().min(1),
+  tablePath: z.string().min(1),
+  codeField: z.string().min(1),
+  labelField: z.string().min(1),
+})
+
 const nextFlightQuery = z.object({
   kind: z.literal('next-flight-query'),
   queryKey: z.string().min(1),
@@ -26,14 +33,11 @@ const nextFlightQuery = z.object({
     careerCode: z.string().min(1),
     careerMinYears: z.string().min(1),
     areaCodes: z.string().min(1),
+    employmentCodes: z.string().min(1).optional(),
     jobTags: z.string().min(1),
   }),
-  areaCodes: z.object({
-    queryKey: z.string().min(1),
-    tablePath: z.string().min(1),
-    codeField: z.string().min(1),
-    labelField: z.string().min(1),
-  }),
+  areaCodes: codeLookup,
+  employmentCodes: codeLookup.optional(),
   careerCodes: z.record(z.string(), z.enum(['new', 'any', 'experienced', 'newOrExperienced'])),
   careerMinYearsUnspecified: z.array(z.number()),
   jobTagsSeparator: z.string().min(1),
@@ -75,6 +79,8 @@ const htmlSelectors = z.object({
   locationPartsSelector: z.string().min(1).optional(),
   inferLocationFromCompany: z.boolean().default(false),
   careerSelector: z.string().min(1).optional(),
+  employmentSelector: z.string().min(1).optional(),
+  inferEmploymentFromTitle: z.boolean().default(false),
   jobTagsSelector: z.string().min(1).optional(),
 })
 

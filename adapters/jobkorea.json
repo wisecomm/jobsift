@@ -32,6 +32,7 @@
       "careerCode": "careerType",
       "careerMinYears": "careerRange",
       "areaCodes": "areaCodeList",
+      "employmentCodes": "employmentTypeCodeList",
       "jobTags": "jobClassificationOrIndustry"
     },
     "areaCodes": {
@@ -39,6 +40,12 @@
       "tablePath": "state.data.area",
       "codeField": "code",
       "labelField": "tagDisplayName"
+    },
+    "employmentCodes": {
+      "queryKey": "CODES",
+      "tablePath": "state.data.employment",
+      "codeField": "code",
+      "labelField": "displayName"
     },
     "careerCodes": { "1": "new", "2": "experienced", "3": "newOrExperienced", "4": "any" },
     "careerMinYearsUnspecified": [0, 100],

@@ -1,15 +1,17 @@
-import { postingSources, type PostingStatus, type StoredPosting } from '../shared/types'
+import { postingSources, type EmploymentType, type PostingStatus, type StoredPosting } from '../shared/types'
 
 export const PAGE_SIZE = 10
 
 export type StatusTab = PostingStatus | 'active' | 'all'
 export type CareerOption = 'all' | 'newOk' | 'experienced' | 'any'
+export type EmploymentOption = EmploymentType | 'all'
 
 export interface ListView {
   status: StatusTab
   /** A site id, or `all`. */
   site: string
   career: CareerOption
+  employmentType: EmploymentOption
   query: string
   /** 1-based; clamped to the last page when the result is shorter. */
   page: number
@@ -25,7 +27,7 @@ export interface Selection {
   counts: Record<PostingStatus | 'all', number>
 }
 
-export const INITIAL_VIEW: ListView = { status: 'new', site: 'all', career: 'all', query: '', page: 1 }
+export const INITIAL_VIEW: ListView = { status: 'new', site: 'all', career: 'all', employmentType: 'all', query: '', page: 1 }
 
 const CAREER_KINDS: Record<Exclude<CareerOption, 'all'>, ReadonlySet<string>> = {
   newOk: new Set(['new', 'newOrExperienced', 'any']),
@@ -33,9 +35,10 @@ const CAREER_KINDS: Record<Exclude<CareerOption, 'all'>, ReadonlySet<string>> = 
   any: new Set(['any']),
 }
 
-function matchesFilters(p: StoredPosting, { site, career, query }: ListView): boolean {
+function matchesFilters(p: StoredPosting, { site, career, employmentType, query }: ListView): boolean {
   if (site !== 'all' && !postingSources(p).some((s) => s.site === site)) return false
   if (career !== 'all' && !CAREER_KINDS[career].has(p.career.kind)) return false
+  if (employmentType !== 'all' && !(p.employmentTypes ?? []).includes(employmentType)) return false
   const needle = query.trim().toLowerCase()
   if (needle === '') return true
   return (

@@ -83,6 +83,16 @@ describe('selectPostings filters', () => {
     expect(ids(selectPostings(data2, view({ query: '성남' })).rows)).toEqual(['2'])
     expect(ids(selectPostings(data2, view({ query: '전자' })).rows)).toEqual(['3'])
   })
+
+  it('filters by employmentType', () => {
+    const emp = [
+      stored('1', { employmentTypes: ['regular'] }),
+      stored('2', { employmentTypes: ['regular', 'contract'] }),
+      stored('3', {}),
+    ]
+    expect(ids(selectPostings(emp, view({ employmentType: 'contract' })).rows)).toEqual(['2'])
+    expect(ids(selectPostings(emp, view({ employmentType: 'all' })).rows)).toEqual(['1', '2', '3'])
+  })
 })
 
 describe('selectPostings order', () => {

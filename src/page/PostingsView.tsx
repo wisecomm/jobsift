@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
+import { EMPLOYMENT_TYPE_OPTIONS } from '../shared/employment'
 import { postingSources, type PostingKey, type PostingPatch, type StoredPosting } from '../shared/types'
 import { Pager } from './Pager'
 import { PostingCard } from './PostingCard'
-import { INITIAL_VIEW, PAGE_SIZE, selectPostings, type CareerOption, type ListView } from './selectPostings'
+import { INITIAL_VIEW, PAGE_SIZE, selectPostings, type CareerOption, type EmploymentOption, type ListView } from './selectPostings'
 import { siteName } from './sites'
 import { STATUS_TABS } from './statuses'
 
@@ -43,7 +44,7 @@ export function PostingsView({ postings, hasCriteria, siteOrder, onUpdate, onOpe
     })
   }, [postings, siteOrder])
 
-  const filtered = view.site !== 'all' || view.career !== 'all' || view.query.trim() !== ''
+  const filtered = view.site !== 'all' || view.career !== 'all' || view.employmentType !== 'all' || view.query.trim() !== ''
   const now = new Date()
   const hasScored = selection.rows.some((p) => p.score !== null)
 
@@ -100,6 +101,19 @@ export function PostingsView({ postings, hasCriteria, siteOrder, onUpdate, onOpe
           ))}
         </select>
 
+        <select
+          aria-label="고용형태 필터"
+          value={view.employmentType}
+          onChange={(e) => change({ employmentType: e.target.value as EmploymentOption })}
+        >
+          <option value="all">고용형태 전체</option>
+          {EMPLOYMENT_TYPE_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+
         <input
           className="toolbar-search"
           type="search"
@@ -125,7 +139,7 @@ export function PostingsView({ postings, hasCriteria, siteOrder, onUpdate, onOpe
           hasCriteria={hasCriteria}
           nothingCollected={postings.length === 0}
           filtered={filtered}
-          onResetFilters={() => change({ site: 'all', career: 'all', query: '' })}
+          onResetFilters={() => change({ site: 'all', career: 'all', employmentType: 'all', query: '' })}
           onOpenSettings={onOpenSettings}
         />
       )}

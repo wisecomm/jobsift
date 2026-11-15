@@ -31,6 +31,7 @@ export const emptyGateCounts = (): Record<RejectGate, number> => ({
   keywordMismatch: 0,
   location: 0,
   career: 0,
+  employmentType: 0,
   lowScore: 0,
 })
 

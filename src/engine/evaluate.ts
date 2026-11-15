@@ -5,7 +5,7 @@ export interface EvaluateOptions {
   requireKeywordMatch?: boolean
 }
 
-export type RuleGroup = 'deadline' | 'keyword' | 'location' | 'career'
+export type RuleGroup = 'deadline' | 'keyword' | 'location' | 'career' | 'employmentType'
 
 interface EvalContext {
   posting: JobPosting
@@ -107,6 +107,17 @@ export const RULE_GATES: readonly RuleGate[] = [
     label: '희망 경력 불일치',
     check: ({ posting, criteria }) =>
       posting.career.kind === INCOMPATIBLE_CAREER[criteria.career] ? { gate: 'career' } : null,
+  },
+  {
+    group: 'employmentType',
+    gate: 'employmentType',
+    label: '희망 고용형태 불일치',
+    check: ({ posting, criteria }) => {
+      if (criteria.employmentTypes.length === 0) return null
+      const types = posting.employmentTypes ?? []
+      if (types.length === 0) return null
+      return types.some((t) => criteria.employmentTypes.includes(t)) ? null : { gate: 'employmentType' }
+    },
   },
 ]
 

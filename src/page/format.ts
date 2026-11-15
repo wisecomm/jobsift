@@ -36,7 +36,7 @@ function summaryBody(s: Totals): string {
   const stored = s.aiOn ? `채점 대기열에 ${s.queued}건 추가` : `저장 ${s.saved}건`
   return (
     `확인 ${s.scanned}건 · ${stored} · 제외 ${s.discarded}건 ` +
-    `(키워드 불일치 ${g.keywordMismatch}, 지역 ${g.location}, 경력 ${g.career}, 마감 ${g.expired}) · 마감 처리 ${s.expiredMarked}건`
+    `(키워드 불일치 ${g.keywordMismatch}, 지역 ${g.location}, 경력 ${g.career}, 고용형태 ${g.employmentType}, 마감 ${g.expired}) · 마감 처리 ${s.expiredMarked}건`
   )
 }
 
@@ -49,7 +49,7 @@ export function combineSummaries(summaries: readonly CollectionSummary[]): Total
     queued: 0,
     aiOn: summaries.some((s) => s.aiOn),
     discarded: 0,
-    discardedByGate: { expired: 0, keywordMismatch: 0, location: 0, career: 0, lowScore: 0 },
+    discardedByGate: { expired: 0, keywordMismatch: 0, location: 0, career: 0, employmentType: 0, lowScore: 0 },
     expiredMarked: 0,
   }
   for (const s of summaries) {
