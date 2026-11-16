@@ -53,7 +53,7 @@ describe('scorePending', () => {
       ['24', 24, '이유 공고 24', 'new'],
       ['25', 25, '이유 공고 25', 'new'],
     ])
-    expect(kept[0]).toMatchObject({ title: expect.stringContaining('공고'), matchedKeywords: ['전산'], memo: '' })
+    expect(kept[0]).toMatchObject({ title: expect.stringContaining('공고'), matchedKeywords: ['전산'], memo: '', collectedAt: NOW.toISOString() })
     const discards = await store.listDiscards('jobkorea')
     expect(discards).toHaveLength(21)
     expect(discards.find((d) => d.externalId === '5')).toEqual({

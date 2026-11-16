@@ -79,7 +79,7 @@ export async function scorePending(store: Store, { score, pace, minScore, now, o
             score: value,
             scoreReason: reason,
             tokenUsage: postingUsage,
-            collectedAt: pending.queuedAt,
+            collectedAt: nowIso,
             updatedAt: nowIso,
           }),
         )

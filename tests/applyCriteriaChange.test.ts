@@ -116,7 +116,7 @@ describe('applyCriteriaChange with AI turned off', () => {
 
     expect(result.removed).toBe(1)
     expect(await store.listPending('jobkorea')).toEqual([])
-    expect(await store.getPosting({ site: 'jobkorea', externalId: 'match' })).toMatchObject({ status: 'new', memo: '', score: null, scoreReason: null, matchedKeywords: ['전산'], collectedAt: '2026-11-02T00:00:00Z' })
+    expect(await store.getPosting({ site: 'jobkorea', externalId: 'match' })).toMatchObject({ status: 'new', memo: '', score: null, scoreReason: null, matchedKeywords: ['전산'], collectedAt: NOW.toISOString() })
     expect((await store.listDiscards('jobkorea')).map((d) => [d.externalId, d.reason.gate])).toEqual([['mismatch', 'keywordMismatch']])
   })
 })

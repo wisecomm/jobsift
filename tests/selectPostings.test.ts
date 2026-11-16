@@ -68,8 +68,8 @@ describe('selectPostings filters', () => {
       stored('2', { site: 'saramin' }),
       stored('3', { site: 'jobkorea', alsoOn: [{ site: 'saramin', externalId: 's3', url: 'https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=s3' }] }),
     ]
-    expect(ids(selectPostings(sites, view({ site: 'saramin' })).rows)).toEqual(['2', '3'])
-    expect(ids(selectPostings(sites, view({ site: 'jobkorea' })).rows)).toEqual(['1', '3'])
+    expect(ids(selectPostings(sites, view({ site: 'saramin' })).rows)).toEqual(['3', '2'])
+    expect(ids(selectPostings(sites, view({ site: 'jobkorea' })).rows)).toEqual(['3', '1'])
   })
 
   it('searches title, company, locations and matched keywords, ignoring case and surrounding space', () => {
@@ -91,30 +91,20 @@ describe('selectPostings filters', () => {
       stored('3', {}),
     ]
     expect(ids(selectPostings(emp, view({ employmentType: 'contract' })).rows)).toEqual(['2'])
-    expect(ids(selectPostings(emp, view({ employmentType: 'all' })).rows)).toEqual(['1', '2', '3'])
+    expect(ids(selectPostings(emp, view({ employmentType: 'all' })).rows)).toEqual(['3', '2', '1'])
   })
 })
 
 describe('selectPostings order', () => {
-  it('puts higher scores first, unscored last, newest collectedAt then postedAt within equal scores', () => {
+  it('orders by newest collectedAt first, then newest numeric externalId regardless of score or postedAt', () => {
     const data = [
-      stored('old-null', { postedAt: '2026-11-01T00:00:00Z' }),
-      stored('low', { score: 40, postedAt: '2026-11-12T00:00:00Z' }),
-      stored('new-null', { postedAt: '2026-11-12T00:00:00Z' }),
-      stored('high', { score: 90, postedAt: '2026-11-01T00:00:00Z' }),
-      stored('zero', { score: 0 }),
-      stored('low-newer', { score: 40, postedAt: '2026-11-13T00:00:00Z' }),
-      stored('newest-collected', { collectedAt: '2026-11-14T00:00:00Z', postedAt: '2026-10-01T00:00:00Z' }),
+      stored('2', { collectedAt: '2026-11-12T00:00:00Z', score: 95 }),
+      stored('10', { collectedAt: '2026-11-13T00:00:00Z', postedAt: '2026-11-01T00:00:00Z', score: 40 }),
+      stored('100', { collectedAt: '2026-11-13T00:00:00Z', postedAt: '2026-10-01T00:00:00Z', score: null }),
+      stored('20', { collectedAt: '2026-11-13T00:00:00Z', postedAt: '2026-11-12T00:00:00Z', score: 80 }),
+      stored('5', { collectedAt: '2026-11-14T00:00:00Z', postedAt: '2026-10-01T00:00:00Z', score: 10 }),
     ]
-    expect(ids(selectPostings(data, view()).rows)).toEqual([
-      'high',
-      'low-newer',
-      'low',
-      'zero',
-      'newest-collected',
-      'new-null',
-      'old-null',
-    ])
+    expect(ids(selectPostings(data, view()).rows)).toEqual(['5', '100', '20', '10', '2'])
   })
 })
 

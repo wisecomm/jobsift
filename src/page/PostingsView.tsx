@@ -46,7 +46,6 @@ export function PostingsView({ postings, hasCriteria, siteOrder, onUpdate, onOpe
 
   const filtered = view.site !== 'all' || view.career !== 'all' || view.employmentType !== 'all' || view.query.trim() !== ''
   const now = new Date()
-  const hasScored = selection.rows.some((p) => p.score !== null)
 
   return (
     <section aria-label="공고" className="postings-section">
@@ -149,7 +148,7 @@ export function PostingsView({ postings, hasCriteria, siteOrder, onUpdate, onOpe
         totalPages={selection.totalPages}
         totalItems={selection.totalItems}
         pageSize={PAGE_SIZE}
-        sortLabel={hasScored ? 'AI 점수 · 최신 수집일 순' : '최신 수집일 순'}
+        sortLabel="최신 수집일 · 최신 공고 ID 순"
         onPage={(page) => setView((v) => ({ ...v, page }))}
       />
     </section>

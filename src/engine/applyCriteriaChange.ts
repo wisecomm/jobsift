@@ -57,7 +57,7 @@ export async function applyCriteriaChange(
         matchedKeywords: outcome.matchedKeywords,
         score: null,
         scoreReason: null,
-        collectedAt: posting.queuedAt,
+        collectedAt: nowIso,
         updatedAt: nowIso,
       }),
     )

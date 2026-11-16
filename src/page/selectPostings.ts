@@ -50,15 +50,10 @@ function matchesFilters(p: StoredPosting, { site, career, employmentType, query 
 }
 
 function compare(a: StoredPosting, b: StoredPosting): number {
-  if (a.score !== b.score) {
-    if (a.score === null) return 1
-    if (b.score === null) return -1
-    return b.score - a.score
-  }
   return (
     Date.parse(b.collectedAt) - Date.parse(a.collectedAt) ||
-    Date.parse(b.postedAt) - Date.parse(a.postedAt) ||
-    a.externalId.localeCompare(b.externalId)
+    b.externalId.localeCompare(a.externalId, undefined, { numeric: true }) ||
+    a.site.localeCompare(b.site)
   )
 }
 
