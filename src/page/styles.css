@@ -207,6 +207,7 @@ input, select, textarea {
 .card.status-expired, .card.status-dismissed { opacity: 0.72; }
 .card-main { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 8px; }
 .card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 12.5px; }
+.card-dates { margin-top: -2px; }
 .site-pill {
   background: var(--subtle);
   color: var(--text);

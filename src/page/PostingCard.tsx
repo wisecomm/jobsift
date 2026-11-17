@@ -49,13 +49,16 @@ export function PostingCard({ posting: p, now, onUpdate }: Props) {
               AI {p.score}점
             </span>
           )}
+          <span className="meta-muted">· 수집: {formatDateTime(p.collectedAt)}</span>
           {p.status !== 'new' && <span className="state-pill">{STATUS_LABEL[p.status]}</span>}
-          <span className="meta-muted">· 등록: {formatDate(p.postedAt)}</span>
+        </div>
+
+        <div className="card-meta card-dates">
+          <span className="meta-muted">등록: {formatDate(p.postedAt)}</span>
           <span className={deadline.date ? 'meta-deadline' : 'meta-muted'}>
             · 마감: {deadline.date ?? deadline.badge}
             {deadline.date && deadline.urgent ? ` (${deadline.badge})` : ''}
           </span>
-          <span className="meta-muted">· 수집: {formatDateTime(p.collectedAt)}</span>
         </div>
 
         <h3 className="card-title">
